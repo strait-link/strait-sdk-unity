@@ -1,0 +1,425 @@
+{
+  "version": 1,
+  "generatedFrom": "sdk-react-native/src/core.ts",
+  "constants": {
+    "RESUME_WINDOW_MS": 2000,
+    "TRANSIENT_PAUSE_MS": 1000
+  },
+  "screenWidth": [
+    {
+      "logical": 411.4285714285714,
+      "expected": 412
+    },
+    {
+      "logical": 412,
+      "expected": 412
+    },
+    {
+      "logical": 393,
+      "expected": 393
+    },
+    {
+      "logical": 390.0000001,
+      "expected": 390
+    },
+    {
+      "logical": 360,
+      "expected": 360
+    },
+    {
+      "logical": 411.0004,
+      "expected": 411
+    },
+    {
+      "logical": 384.00000000000006,
+      "expected": 384
+    },
+    {
+      "logical": 411.42857142857144,
+      "expected": 412
+    },
+    {
+      "logical": 392.72727272727275,
+      "expected": 393
+    }
+  ],
+  "splitUrl": [
+    {
+      "input": "https://Links.Test/sale?utm_source=sms&x=a%20b",
+      "expected": {
+        "scheme": "https",
+        "host": "links.test",
+        "path": "/sale",
+        "params": {
+          "utm_source": "sms",
+          "x": "a b"
+        }
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p/42?color=red#frag",
+      "expected": {
+        "scheme": "straitlink",
+        "host": "shop.example",
+        "path": "/p/42",
+        "params": {
+          "color": "red"
+        }
+      }
+    },
+    {
+      "input": "https://links.test",
+      "expected": {
+        "scheme": "https",
+        "host": "links.test",
+        "path": "/",
+        "params": {}
+      }
+    },
+    {
+      "input": "https://links.test/?q=1+2&empty=&flag",
+      "expected": {
+        "scheme": "https",
+        "host": "links.test",
+        "path": "/",
+        "params": {
+          "q": "1 2",
+          "empty": "",
+          "flag": ""
+        }
+      }
+    },
+    {
+      "input": "https://shop.example/c/caf%C3%A9?name=Jos%C3%A9",
+      "expected": {
+        "scheme": "https",
+        "host": "shop.example",
+        "path": "/c/caf%C3%A9",
+        "params": {
+          "name": "José"
+        }
+      }
+    },
+    {
+      "input": "not a url",
+      "expected": null
+    },
+    {
+      "input": "",
+      "expected": null
+    }
+  ],
+  "referrer": [
+    {
+      "input": "utm_source=google-play&strait_link=lnk_7",
+      "expected": "lnk_7"
+    },
+    {
+      "input": "strait_link=lnk%5F7&utm_medium=cpc",
+      "expected": "lnk_7"
+    },
+    {
+      "input": "utm_source=google-play&utm_medium=organic",
+      "expected": null
+    },
+    {
+      "input": "strait_link=",
+      "expected": null
+    },
+    {
+      "input": "xstrait_link=lnk_9",
+      "expected": null
+    },
+    {
+      "input": "",
+      "expected": null
+    },
+    {
+      "input": null,
+      "expected": null
+    }
+  ],
+  "classify": [
+    {
+      "raw": "https://links.test/sale",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://LINKS.test/sale?utm_source=sms",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://go.brand.com/promo",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://shop.example/p/42?color=red",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42?color=red",
+        "path": "/p/42",
+        "params": {
+          "color": "red"
+        }
+      }
+    },
+    {
+      "raw": "straitlink://shop.example/p/42?color=red",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "custom_scheme",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42?color=red",
+        "path": "/p/42",
+        "params": {
+          "color": "red"
+        }
+      }
+    },
+    {
+      "raw": "myapp://open/cart",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "custom_scheme",
+        "needsResolve": false,
+        "url": "https://open/cart",
+        "path": "/cart",
+        "params": {}
+      }
+    },
+    {
+      "raw": "not a url",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": null
+    }
+  ],
+  "linkHosts": [
+    {
+      "endpoint": "https://bridge-redirect-engine.onrender.com",
+      "linkHosts": [],
+      "expected": [
+        "bridge-redirect-engine.onrender.com"
+      ]
+    },
+    {
+      "endpoint": "https://links.test/",
+      "linkHosts": [
+        "go.brand.com",
+        "https://Go2.Brand.com/",
+        "GO.brand.com",
+        "  ",
+        "bad host/x",
+        "localhost:3000"
+      ],
+      "expected": [
+        "links.test",
+        "go.brand.com",
+        "go2.brand.com",
+        "localhost:3000"
+      ]
+    },
+    {
+      "endpoint": "http://localhost:3000",
+      "linkHosts": [
+        "https://links.test"
+      ],
+      "expected": [
+        "localhost:3000",
+        "links.test"
+      ]
+    }
+  ],
+  "appState": [
+    {
+      "name": "on screen, link arrives",
+      "steps": [
+        [
+          "url",
+          30000
+        ]
+      ],
+      "expected": [
+        "foreground"
+      ]
+    },
+    {
+      "name": "background 60s, link before resume (Android onNewIntent first)",
+      "steps": [
+        [
+          "state",
+          "background",
+          0
+        ],
+        [
+          "url",
+          60000
+        ],
+        [
+          "state",
+          "active",
+          60030
+        ]
+      ],
+      "expected": [
+        "background"
+      ]
+    },
+    {
+      "name": "background 60s, resume then link",
+      "steps": [
+        [
+          "state",
+          "background",
+          0
+        ],
+        [
+          "state",
+          "active",
+          60000
+        ],
+        [
+          "url",
+          60300
+        ]
+      ],
+      "expected": [
+        "background"
+      ]
+    },
+    {
+      "name": "brief pause wraps delivery (app was on screen)",
+      "steps": [
+        [
+          "state",
+          "background",
+          30000
+        ],
+        [
+          "url",
+          30040
+        ],
+        [
+          "state",
+          "active",
+          30070
+        ]
+      ],
+      "expected": [
+        "foreground"
+      ]
+    },
+    {
+      "name": "brief pause, link after resume",
+      "steps": [
+        [
+          "state",
+          "background",
+          30000
+        ],
+        [
+          "state",
+          "active",
+          30040
+        ],
+        [
+          "url",
+          30060
+        ]
+      ],
+      "expected": [
+        "foreground"
+      ]
+    },
+    {
+      "name": "resumed long ago, link now",
+      "steps": [
+        [
+          "state",
+          "background",
+          0
+        ],
+        [
+          "state",
+          "active",
+          5000
+        ],
+        [
+          "url",
+          20000
+        ]
+      ],
+      "expected": [
+        "foreground"
+      ]
+    },
+    {
+      "name": "inactive (e.g. notification shade) then link",
+      "steps": [
+        [
+          "state",
+          "inactive",
+          1000
+        ],
+        [
+          "url",
+          1500
+        ]
+      ],
+      "expected": [
+        "foreground"
+      ]
+    },
+    {
+      "name": "background exactly at threshold",
+      "steps": [
+        [
+          "state",
+          "background",
+          0
+        ],
+        [
+          "url",
+          1000
+        ]
+      ],
+      "expected": [
+        "background"
+      ]
+    }
+  ]
+}
