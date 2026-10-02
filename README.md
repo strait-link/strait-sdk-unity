@@ -13,6 +13,9 @@ C# int overflow is wrapped with `unchecked` to match JS's 32-bit `|0`.
 
 ```csharp
 var sig = Strait.StraitSignature.Compute(Screen.width, screenScale, lang, ip, tz);
-// POST { appId, platform:"ios"/"android", screenWidth, pixelRatio, language, timezone }
+// POST { publishableKey, platform:"ios"/"android", screenWidth, pixelRatio, language, timezone }
 // to {endpoint}/v1/match via UnityWebRequest; route to result.longUrl
 ```
+
+**Publishable key:** Dashboard → Get started → Publishable key (`bk_pub_live_…`).
+It's safe to include in your app. Never put your secret key (`bk_live_…`) in an app.
