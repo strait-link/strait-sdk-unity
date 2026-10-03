@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](../).
-Version **0.5.0**. It is at parity with the React Native reference SDK
+Version **0.6.0**. It is at parity with the React Native reference SDK
 ([`shared-spec/SDK-CONTRACT.md`](../shared-spec/SDK-CONTRACT.md)).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -33,6 +33,7 @@ built-in writer and parser (`StraitJson`).
 | B12 | `SplitUrl` matches the vectors exactly (no `System.Uri`) | ✓ |
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
 | B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()` | ✓ |
+| B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 
 ### What Strait records automatically (no extra code)
 
@@ -64,7 +65,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.5.0
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.6.0
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -147,6 +148,11 @@ await StraitLinks.Client.TrackEvent("purchase", value: 4.99, currency: "USD", li
 var mine = await StraitLinks.Client.ReportFingerprint();    // Dictionary<string, object?>, or null when offline
 var cmp  = await StraitLinks.Client.CompareFingerprint();   // the engine's app-vs-browser comparison
 ```
+
+`TrackEvent` carries the tap id of the last link open that had one (a browser hand-off or a
+Play install) for 7 days, so the dashboard can place the revenue on that tap's channel and
+A/B variant (contract B15). A newer open by a verified short link replaces it (its tap id
+isn't known to the app, so the event then carries none). Pass `clickId:` to set it yourself.
 
 ### PlayerPrefs storage
 
@@ -307,7 +313,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId, clickId)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the same fields and wire values as the React Native SDK.
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is

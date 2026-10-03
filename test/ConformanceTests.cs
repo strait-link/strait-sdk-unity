@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(2, v.GetProperty("version").GetInt32());
+            Assert.Equal(3, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -41,11 +41,33 @@ namespace Strait.Tests
             Assert.Equal(AppStateTracker.TransientPauseMs, c.GetProperty("TRANSIENT_PAUSE_MS").GetInt32());
             Assert.Equal(StraitCore.OpenQueueMax, c.GetProperty("OPEN_QUEUE_MAX").GetInt32());
             Assert.Equal(StraitCore.OpenQueueMaxAgeMs, c.GetProperty("OPEN_QUEUE_MAX_AGE_MS").GetInt64());
-            Assert.Equal(4, c.EnumerateObject().Count());
+            Assert.Equal(StraitCore.AttributionWindowMs, c.GetProperty("ATTRIBUTION_WINDOW_MS").GetInt64());
+            Assert.Equal(5, c.EnumerateObject().Count());
             Assert.Equal(2000, AppStateTracker.ResumeWindowMs);
             Assert.Equal(1000, AppStateTracker.TransientPauseMs);
             Assert.Equal(100, StraitCore.OpenQueueMax);
             Assert.Equal(604_800_000L, StraitCore.OpenQueueMaxAgeMs);
+            Assert.Equal(604_800_000L, StraitCore.AttributionWindowMs);
+        }
+
+        [Fact]
+        public void EventClickIdVectors()
+        {
+            foreach (var c in Vectors().GetProperty("eventClickId").EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var got = StraitCore.EventClickId(StrOrNull(c.GetProperty("stored")), c.GetProperty("now").GetInt64(), StrOrNull(c.GetProperty("explicit")));
+                Assert.True(StrOrNull(c.GetProperty("expected")) == got, $"{name}: got '{got}'");
+            }
+        }
+
+        [Fact]
+        public void RememberTap_RoundTrips()
+        {
+            Assert.Equal("{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000}",
+                StraitCore.RememberTap("3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F", 1_800_000_000_000));
+            Assert.Equal("3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+                StraitCore.EventClickId(StraitCore.RememberTap("3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f", 10), 10));
         }
 
         [Fact]

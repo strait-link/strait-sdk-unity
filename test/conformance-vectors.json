@@ -1,11 +1,12 @@
 {
-  "version": 2,
+  "version": 3,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
     "TRANSIENT_PAUSE_MS": 1000,
     "OPEN_QUEUE_MAX": 100,
-    "OPEN_QUEUE_MAX_AGE_MS": 604800000
+    "OPEN_QUEUE_MAX_AGE_MS": 604800000,
+    "ATTRIBUTION_WINDOW_MS": 604800000
   },
   "screenWidth": [
     {
@@ -1199,6 +1200,99 @@
     {
       "status": 503,
       "expected": true
+    }
+  ],
+  "eventClickId": [
+    {
+      "name": "attaches the remembered tap within the window",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "attaches at exactly 7 days",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799395200000}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "not after 7 days",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799395199999}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "explicit clickId overrides the remembered tap",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "explicit": "11111111-2222-4333-8444-555555555555",
+      "expected": "11111111-2222-4333-8444-555555555555"
+    },
+    {
+      "name": "explicit clickId with no remembered tap",
+      "stored": null,
+      "now": 1800000000000,
+      "explicit": "11111111-2222-4333-8444-555555555555",
+      "expected": "11111111-2222-4333-8444-555555555555"
+    },
+    {
+      "name": "empty explicit clickId counts as none",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "explicit": "",
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "no remembered tap",
+      "stored": null,
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "forgotten tap (empty value)",
+      "stored": "",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "unreadable value",
+      "stored": "not json",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "malformed tap id",
+      "stored": "{\"clickId\":\"not-a-uuid\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "missing timestamp",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\"}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "tap dated after now (clock moved back)",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000001}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": null
+    },
+    {
+      "name": "upper-case tap id is lower-cased",
+      "stored": "{\"clickId\":\"3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F\",\"at\":1800000000000}",
+      "now": 1800000000000,
+      "explicit": null,
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
     }
   ]
 }

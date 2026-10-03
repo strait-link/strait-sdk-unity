@@ -539,5 +539,104 @@ namespace Strait.Tests
             engine.Offline = true;
             Assert.False(await h.Strait.TrackEvent("signup"));
         }
+
+        // ------------------------------------------------ conversion events carry the tap id (B15)
+
+        private const string Tap = "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f";
+        private const string OtherTap = "11111111-2222-4333-8444-555555555555";
+        private const long Day = 24L * 60 * 60 * 1000;
+        private static string HandOff => "straitlink://shop.example/p/42?strait_click=" + Tap;
+
+        private static JsonElement LastEvent(FakeEngine e) => e.Calls.Last(c => c.Path == "/v1/event").Body!.Value;
+        private static Dictionary<string, string> EventRoutes(params (string, string)[] extra) =>
+            Routes(new[] { ("/v1/event", "{\"ok\":true}"), ("/v1/open", "{\"ok\":true}") }.Concat(extra).ToArray());
+
+        [Fact]
+        public async Task B15_HandOffTap_IsRememberedAndAttached()
+        {
+            var engine = new FakeEngine(EventRoutes());
+            var h = Make(engine);
+            await h.Strait.Start(HandOff);
+            h.Clock.T += Day;
+            Assert.True(await h.Strait.TrackEvent("purchase", 5, "USD"));
+            Assert.Equal(Tap, LastEvent(engine).GetProperty("clickId").GetString());
+            var stored = JsonDocument.Parse((await h.Storage.GetItemAsync(StraitClient.TapKey))!).RootElement;
+            Assert.Equal(Tap, stored.GetProperty("clickId").GetString());
+            Assert.Equal(1_000_000, stored.GetProperty("at").GetInt64());
+        }
+
+        [Fact]
+        public async Task B15_NotAfter7Days()
+        {
+            var engine = new FakeEngine(EventRoutes());
+            var h = Make(engine);
+            await h.Strait.Start(HandOff);
+            h.Clock.T += 7 * Day + 1;
+            await h.Strait.TrackEvent("purchase");
+            Assert.False(LastEvent(engine).TryGetProperty("clickId", out _));
+        }
+
+        [Fact]
+        public async Task B15_ExplicitClickId_Overrides()
+        {
+            var engine = new FakeEngine(EventRoutes());
+            var h = Make(engine);
+            await h.Strait.Start(HandOff);
+            await h.Strait.TrackEvent("purchase", clickId: OtherTap);
+            Assert.Equal(OtherTap, LastEvent(engine).GetProperty("clickId").GetString());
+        }
+
+        [Fact]
+        public async Task B15_NoRememberedTap_NoClickId()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/match", "{\"matched\":false}")));
+            var h = Make(engine);
+            await h.Strait.Start(null);
+            await h.Strait.TrackEvent("signup");
+            Assert.False(LastEvent(engine).TryGetProperty("clickId", out _));
+        }
+
+        [Fact]
+        public async Task B15_PlayReferrerTap_IsRememberedOnDeferredInstall()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/referrer",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/7\",\"linkId\":\"lnk_7\"}")));
+            var h = Make(engine, referrer: "strait_link=lnk_7&strait_click=" + Tap);
+            await h.Strait.Start(null);
+            await h.Strait.TrackEvent("purchase");
+            Assert.Equal(Tap, LastEvent(engine).GetProperty("clickId").GetString());
+        }
+
+        [Fact]
+        public async Task B15_NewerShortLinkOpen_ForgetsOlderTap()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/resolve",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/42\",\"linkId\":\"lnk_42\"}")));
+            var h = Make(engine);
+            await h.Strait.Start(HandOff);
+            await h.Strait.HandleUrl("https://links.test/sale");
+            await h.Strait.TrackEvent("purchase");
+            Assert.False(LastEvent(engine).TryGetProperty("clickId", out _));
+        }
+
+        private sealed class FailingStore : IKeyValueStore
+        {
+            public Task<string?> GetItemAsync(string key) => throw new InvalidOperationException("io");
+            public Task SetItemAsync(string key, string value) => throw new InvalidOperationException("io");
+        }
+
+        [Fact]
+        public async Task B15_UnreadableStorage_NeverBlocksTheEvent()
+        {
+            var engine = new FakeEngine(EventRoutes());
+            var strait = new StraitClient(new StraitConfig
+            {
+                PublishableKey = PK, Endpoint = Endpoint, Storage = new FailingStore(), Platform = "android",
+                DeviceFields = Device, Transport = engine, Clock = () => 1_000_000,
+            });
+            await strait.HandleUrl("straitlink://x.example/?strait_click=" + Tap);
+            Assert.True(await strait.TrackEvent("purchase"));
+            Assert.False(LastEvent(engine).TryGetProperty("clickId", out _));
+        }
     }
 }

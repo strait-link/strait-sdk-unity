@@ -248,6 +248,46 @@ namespace Strait
             return recent.Count > OpenQueueMax ? recent.GetRange(recent.Count - OpenQueueMax, OpenQueueMax) : recent;
         }
 
+        /// <summary>Conversion events carry the tap id of the most recent attributed link open for this long (7 days, contract B15).</summary>
+        public const long AttributionWindowMs = 7L * 24 * 60 * 60 * 1000;
+
+        /// <summary>Storage value for the remembered tap (key <c>strait.lastTap</c>): <c>{"clickId":…,"at":&lt;epoch ms&gt;}</c>.</summary>
+        public static string RememberTap(string clickId, long at) =>
+            StraitJson.Serialize(new[]
+            {
+                new KeyValuePair<string, object?>("clickId", clickId.ToLowerInvariant()),
+                new KeyValuePair<string, object?>("at", at),
+            });
+
+        /// <summary>
+        /// The <c>clickId</c> a conversion event sends (contract B15): a non-empty <paramref name="explicitClickId"/>
+        /// wins; otherwise the remembered tap (<paramref name="stored"/>, see <see cref="RememberTap"/>) when it is a
+        /// valid tap id opened at most <see cref="AttributionWindowMs"/> before <paramref name="now"/> (and not after
+        /// it). Anything unreadable means no tap (null).
+        /// </summary>
+        public static string? EventClickId(string? stored, long now, string? explicitClickId = null)
+        {
+            if (!string.IsNullOrEmpty(explicitClickId)) return explicitClickId;
+            if (string.IsNullOrEmpty(stored)) return null;
+            object? parsed;
+            try { parsed = StraitJson.Parse(stored!); }
+            catch (Exception) { return null; }
+            if (!(parsed is Dictionary<string, object?> tap)) return null;
+            if (!tap.TryGetValue("clickId", out var c) || !(c is string clickId) || !ClickIdRe.IsMatch(clickId)) return null;
+            if (!tap.TryGetValue("at", out var a)) return null;
+            double at;
+            switch (a)
+            {
+                case double d: at = d; break;
+                case long l: at = l; break;
+                case int i: at = i; break;
+                default: return null;
+            }
+            if (double.IsNaN(at) || double.IsInfinity(at)) return null;
+            double age = now - at;
+            return age >= 0 && age <= AttributionWindowMs ? clickId.ToLowerInvariant() : null;
+        }
+
         /// <summary>Whether a failed report should be kept for retry: no answer (null), 429 or 5xx.</summary>
         public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
 

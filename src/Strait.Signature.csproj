@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>Strait.Signature</AssemblyName>
     <RootNamespace>Strait</RootNamespace>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <!-- Unity-only sample (needs UnityEngine); shipped in the UPM package, not compiled here. -->

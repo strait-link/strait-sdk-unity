@@ -145,6 +145,8 @@ namespace Strait
         public const string DeferredFlag = "strait.deferredChecked";
         /// <summary>Storage key of the unsent open reports (JSON array).</summary>
         public const string QueueKey = "strait.pendingOpens";
+        /// <summary>Storage key of the remembered tap (contract B15): <c>{"clickId":…,"at":…}</c>, or empty.</summary>
+        public const string TapKey = "strait.lastTap";
 
         private readonly StraitConfig _config;
         private readonly string _base;
@@ -160,6 +162,9 @@ namespace Strait
         // Queue operations run one at a time (storage is async).
         private readonly SemaphoreSlim _queueLock = new SemaphoreSlim(1, 1);
         private Task? _flushing;
+        // Remembered-tap writes are chained so a TrackEvent right after an open sees them.
+        private Task _tapWrite = Task.CompletedTask;
+        private readonly object _tapGate = new object();
         private bool _started;
         private volatile bool _stopped;
 
@@ -314,11 +319,21 @@ namespace Strait
             catch { return null; }
         }
 
-        /// <summary>Conversion / revenue event. True when the engine accepted it (2xx).</summary>
-        public async Task<bool> TrackEvent(string name, double? value = null, string? currency = null, string? linkId = null)
+        /// <summary>
+        /// Conversion / revenue event. True when the engine accepted it (2xx). Carries the tap id of the
+        /// last attributed link open (at most 7 days old, contract B15) unless <paramref name="clickId"/> is given.
+        /// </summary>
+        public async Task<bool> TrackEvent(string name, double? value = null, string? currency = null, string? linkId = null, string? clickId = null)
         {
             try
             {
+                Task pending;
+                lock (_tapGate) pending = _tapWrite;
+                await pending;
+                string? stored = null;
+                try { stored = await _storage.GetItemAsync(TapKey); }
+                catch { stored = null; }
+                var tapId = StraitCore.EventClickId(stored, Now(), clickId);
                 var fields = new List<KeyValuePair<string, object?>>
                 {
                     Kv("publishableKey", _config.PublishableKey),
@@ -327,6 +342,7 @@ namespace Strait
                     Kv("value", value),
                     Kv("currency", currency),
                     Kv("linkId", linkId),
+                    Kv("clickId", tapId),
                 };
                 return (await Call("POST", "/v1/event", fields)).Ok;
             }
@@ -334,6 +350,26 @@ namespace Strait
         }
 
         // ------------------------------------------------------------------ internals
+
+        /// <summary>
+        /// Remember the tap id of an attributed open (B15), or forget it (null) when a newer attributed
+        /// open has no tap id the SDK knows. Never throws; failures are ignored.
+        /// </summary>
+        private void NoteTap(string? clickId, long at)
+        {
+            var value = clickId != null ? StraitCore.RememberTap(clickId, at) : "";
+            lock (_tapGate)
+            {
+                var prev = _tapWrite;
+                _tapWrite = Write(prev);
+            }
+
+            async Task Write(Task prev)
+            {
+                try { await prev; } catch { }
+                try { await _storage.SetItemAsync(TapKey, value); } catch { /* best effort */ }
+            }
+        }
 
         private long Now()
         {
@@ -376,6 +412,7 @@ namespace Strait
                         ev.Matched = matched;
                         ev.Reason = matched ? null : (Str(res.Json, "reason") ?? Str(res.Json, "error"));
                         if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
+                        if (matched) NoteTap(null, t0);
                         ev.LinkId = Str(res.Json, "linkId");
                         if (!IsTrue(res.Json, "recorded"))
                         {
@@ -395,6 +432,7 @@ namespace Strait
                 }
                 else
                 {
+                    if (c.ClickId != null) NoteTap(c.ClickId, t0);
                     // Navigation never waits for the report.
                     _ = Report(NewReport(id, "direct", c.Route, appState, platform, c.Url, c.ClickId, true, firstLaunch, t0));
                     ev.Route = c.Route;
@@ -434,11 +472,12 @@ namespace Strait
                     var linkId = StraitCore.ParseStraitLink(referrer);
                     if (linkId != null)
                     {
+                        var referrerClick = StraitCore.ParseStraitClick(referrer);
                         var body = new List<KeyValuePair<string, object?>>
                         {
                             Kv("publishableKey", _config.PublishableKey),
                             Kv("linkId", linkId),
-                            Kv("clickId", StraitCore.ParseStraitClick(referrer)),
+                            Kv("clickId", referrerClick),
                             Kv("platform", "android"),
                         };
                         if (record) { body.Add(Kv("openId", id)); body.Add(Kv("at", t0)); }
@@ -449,6 +488,7 @@ namespace Strait
                             ev.Matched = true;
                             SetDestination(ev, Str(res.Json, "longUrl"));
                             ev.LinkId = Str(res.Json, "linkId") ?? linkId;
+                            if (record) NoteTap(referrerClick, t0);
                             done = true;
                         }
                     }
@@ -467,6 +507,7 @@ namespace Strait
                     ev.Matched = matched;
                     ev.Reason = matched ? null : "no_match";
                     if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
+                    if (record && matched) NoteTap(null, t0);
                     ev.LinkId = Str(res.Json, "linkId");
                 }
             }
