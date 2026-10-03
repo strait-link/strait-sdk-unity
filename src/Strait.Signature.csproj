@@ -7,4 +7,8 @@
     <RootNamespace>Strait</RootNamespace>
     <Version>0.4.0</Version>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Unity-only sample (needs UnityEngine); shipped in the UPM package, not compiled here. -->
+    <Compile Remove="Samples~/**" />
+  </ItemGroup>
 </Project>

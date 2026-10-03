@@ -77,7 +77,7 @@ namespace Strait
     {
         /// <summary>Workspace publishable key (bk_pub_live_…), Dashboard → Get started. Never a secret key.</summary>
         public string PublishableKey { get; set; } = "";
-        /// <summary>Your Strait link host, e.g. https://bridge-redirect-engine.onrender.com</summary>
+        /// <summary>Your Strait link host, e.g. https://go.yourbrand.com</summary>
         public string Endpoint { get; set; } = "";
         /// <summary>Extra hosts serving your short links (custom domains): "go.brand.com" or "https://go.brand.com".</summary>
         public IList<string> LinkHosts { get; set; } = new List<string>();

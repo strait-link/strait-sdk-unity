@@ -1,0 +1,28 @@
+name: Release
+# Unity Package Manager installs from the git URL (…/<repo>.git?path=src#vX.Y.Z) and
+# OpenUPM builds new tags by itself once the package is listed there, so pushing
+# vX.Y.Z IS the release. This workflow proves the tag is sound. No secrets.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Tag matches src/package.json and the csproj version
+        run: |
+          v="$(node -p "require('./src/package.json').version")"
+          c="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Strait.Signature.csproj)"
+          [ "$GITHUB_REF_NAME" = "v$v" ] && [ "$c" = "$v" ] || { echo "::error::tag $GITHUB_REF_NAME, src/package.json $v and csproj $c must agree"; exit 1; }
+      - run: dotnet test test/Strait.Signature.Tests.csproj
+      - run: node scripts/unity-meta.mjs
+      - run: node scripts/brand.mjs
+      - run: node scripts/brand.mjs --release
+      - name: Package contents (what OpenUPM will ship)
+        run: cd src && npm pack --dry-run
