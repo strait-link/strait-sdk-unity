@@ -387,10 +387,10 @@
   ],
   "linkHosts": [
     {
-      "endpoint": "https://bridge-redirect-engine.onrender.com",
+      "endpoint": "https://strait-redirect-engine.onrender.com",
       "linkHosts": [],
       "expected": [
-        "bridge-redirect-engine.onrender.com"
+        "strait-redirect-engine.onrender.com"
       ]
     },
     {

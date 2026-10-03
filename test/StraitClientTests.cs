@@ -12,7 +12,7 @@ namespace Strait.Tests
     /// <summary>Port of sdk-react-native/test/strait.test.ts with a fake transport + clock.</summary>
     public class StraitClientTests
     {
-        private const string PK = "bk_pub_test_appowner01";
+        private const string PK = "st_pub_test_appowner01";
         private const string Endpoint = "https://links.test";
 
         private static DeviceFields Device() => new DeviceFields { ScreenWidth = 411, PixelRatio = 2.625, Language = "en", Timezone = "Asia/Kolkata" };

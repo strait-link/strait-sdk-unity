@@ -5,10 +5,10 @@
   "npmScope": "@strait",
   "githubOwner": "bazingga08",
   "repoPrefix": "strait",
-  "website": "https://yourbrand.com",
-  "linkDomain": "yourbrand.link",
-  "legalName": "[Company legal name]",
-  "final": false,
+  "website": "https://usestrait.com",
+  "linkDomain": "strait.to",
+  "legalName": "Strait Technologies",
+  "final": true,
   "kind": "unity",
   "package": "sdk-unity"
 }

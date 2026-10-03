@@ -15,7 +15,7 @@ namespace Strait.Tests
     /// </summary>
     public class OpensTests
     {
-        private const string PK = "bk_pub_test_appowner01";
+        private const string PK = "st_pub_test_appowner01";
         private const string Endpoint = "https://links.test";
         private const string Click = "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f";
         private const string OpenIdPattern = "^o_[a-z0-9]+_[a-z0-9]{12}$";

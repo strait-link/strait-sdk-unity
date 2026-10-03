@@ -9,8 +9,8 @@ using UnityEngine;
 
 public class StraitBootstrap : MonoBehaviour
 {
-    [Tooltip("Dashboard → Get started → Publishable key (bk_pub_live_…). Never the secret key.")]
-    public string publishableKey = "bk_pub_live_…";
+    [Tooltip("Dashboard → Get started → Publishable key (st_pub_live_…). Never the secret key.")]
+    public string publishableKey = "st_pub_live_…";
     [Tooltip("Your link host, e.g. https://go.yourbrand.com")]
     public string endpoint = "https://go.yourbrand.com";
 

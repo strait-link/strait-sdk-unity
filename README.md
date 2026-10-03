@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](../).
-Version **0.4.0**. It is at parity with the React Native reference SDK
+Version **0.5.0**. It is at parity with the React Native reference SDK
 ([`shared-spec/SDK-CONTRACT.md`](../shared-spec/SDK-CONTRACT.md)).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -64,7 +64,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.4.0
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.5.0
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -76,10 +76,10 @@ ready-made `StraitBootstrap` MonoBehaviour.
 
 Without Package Manager: copy `src/*.cs` into your project (for example
 `Assets/Strait/`), or build `src/Strait.Signature.csproj` and drop the DLL into
-`Assets/Plugins/` (the assembly name `Strait.Signature` is historical).
+`Assets/Plugins/`.
 
-**Publishable key:** Dashboard → Get started → Publishable key (`bk_pub_live_…`). It is
-safe to put in your app. Never put your secret key (`bk_live_…`) in an app.
+**Publishable key:** Dashboard → Get started → Publishable key (`st_pub_live_…`). It is
+safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 
 ## Wire it into a game
 
@@ -98,7 +98,7 @@ public class StraitLinks : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         Client = new StraitClient(new StraitConfig
         {
-            PublishableKey = "bk_pub_live_…",
+            PublishableKey = "st_pub_live_…",
             Endpoint = "https://go.yourbrand.com",
             LinkHosts = { "go.yourbrand.com" },          // custom domains, if any
             Storage = new PlayerPrefsStore(),

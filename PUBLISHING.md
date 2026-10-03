@@ -13,7 +13,7 @@ install block, `LICENSE` and `src/LICENSE.md`.
 
 ## One-time owner setup
 
-1. **Pick the brand.** From `strait/`: `shared-spec/scripts/rename-brand.sh … --final --apply`.
+1. **Pick the brand.** From the workspace root (the folder holding every SDK repo): `shared-spec/scripts/rename-brand.sh … --final --apply`.
    Rename/move the GitHub repo first if it will change.
 2. **Make the GitHub repo public.**
 3. **OpenUPM:** https://openupm.com/packages/add/ → paste the repo URL → it finds

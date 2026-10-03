@@ -75,7 +75,7 @@ namespace Strait
 
     public sealed class StraitConfig
     {
-        /// <summary>Workspace publishable key (bk_pub_live_…), Dashboard → Get started. Never a secret key.</summary>
+        /// <summary>Workspace publishable key (st_pub_live_…), Dashboard → Get started. Never a secret key.</summary>
         public string PublishableKey { get; set; } = "";
         /// <summary>Your Strait link host, e.g. https://go.yourbrand.com</summary>
         public string Endpoint { get; set; } = "";
