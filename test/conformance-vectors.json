@@ -1,9 +1,11 @@
 {
-  "version": 1,
+  "version": 2,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
-    "TRANSIENT_PAUSE_MS": 1000
+    "TRANSIENT_PAUSE_MS": 1000,
+    "OPEN_QUEUE_MAX": 100,
+    "OPEN_QUEUE_MAX_AGE_MS": 604800000
   },
   "screenWidth": [
     {
@@ -139,6 +141,98 @@
       "expected": null
     }
   ],
+  "referrerClick": [
+    {
+      "input": "strait_link=lnk_7&strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "input": "strait_click=3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F&strait_link=lnk_7",
+      "expected": "3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F"
+    },
+    {
+      "input": "utm_source=google-play&strait_link=lnk_7&strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "input": "strait_link=lnk_7",
+      "expected": null
+    },
+    {
+      "input": "strait_link=lnk_7&strait_click=not-a-uuid",
+      "expected": null
+    },
+    {
+      "input": "strait_link=lnk_7&strait_click=",
+      "expected": null
+    },
+    {
+      "input": "",
+      "expected": null
+    },
+    {
+      "input": null,
+      "expected": null
+    }
+  ],
+  "takeClickId": [
+    {
+      "input": "straitlink://shop.example/p/42?color=red&strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": {
+        "url": "straitlink://shop.example/p/42?color=red",
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p/42?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f&color=red#top",
+      "expected": {
+        "url": "straitlink://shop.example/p/42?color=red#top",
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p/42?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": {
+        "url": "straitlink://shop.example/p/42",
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "input": "https://shop.example/p/42?strait_click=3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F",
+      "expected": {
+        "url": "https://shop.example/p/42",
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p/42?strait_click=not-a-uuid&x=1",
+      "expected": {
+        "url": "straitlink://shop.example/p/42?x=1",
+        "clickId": null
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p/42?x=a%20b&y=1",
+      "expected": {
+        "url": "straitlink://shop.example/p/42?x=a%20b&y=1",
+        "clickId": null
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p/42",
+      "expected": {
+        "url": "straitlink://shop.example/p/42",
+        "clickId": null
+      }
+    },
+    {
+      "input": "straitlink://shop.example/p?strait%5Fclick=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f&z=2",
+      "expected": {
+        "url": "straitlink://shop.example/p?z=2",
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    }
+  ],
   "classify": [
     {
       "raw": "https://links.test/sale",
@@ -186,7 +280,8 @@
         "path": "/p/42",
         "params": {
           "color": "red"
-        }
+        },
+        "clickId": null
       }
     },
     {
@@ -202,7 +297,8 @@
         "path": "/p/42",
         "params": {
           "color": "red"
-        }
+        },
+        "clickId": null
       }
     },
     {
@@ -216,7 +312,8 @@
         "needsResolve": false,
         "url": "https://open/cart",
         "path": "/cart",
-        "params": {}
+        "params": {},
+        "clickId": null
       }
     },
     {
@@ -226,6 +323,66 @@
         "go.brand.com"
       ],
       "expected": null
+    },
+    {
+      "raw": "straitlink://shop.example/p/42?color=red&strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "custom_scheme",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42?color=red",
+        "path": "/p/42",
+        "params": {
+          "color": "red"
+        },
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "raw": "straitlink://shop.example/p/42?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "custom_scheme",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42",
+        "path": "/p/42",
+        "params": {},
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "raw": "https://shop.example/p/42?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f&utm_source=sms",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42?utm_source=sms",
+        "path": "/p/42",
+        "params": {
+          "utm_source": "sms"
+        },
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "raw": "https://links.test/sale?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "linkHosts": [
+        "links.test",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
     }
   ],
   "linkHosts": [
@@ -420,6 +577,628 @@
       "expected": [
         "background"
       ]
+    }
+  ],
+  "openQueue": [
+    {
+      "name": "keeps recent reports in order",
+      "now": 1800000000000,
+      "queue": [
+        {
+          "openId": "o_a",
+          "at": 1799913600000
+        },
+        {
+          "openId": "o_b",
+          "at": 1799999999999
+        }
+      ],
+      "expected": [
+        "o_a",
+        "o_b"
+      ]
+    },
+    {
+      "name": "drops reports older than 7 days",
+      "now": 1800000000000,
+      "queue": [
+        {
+          "openId": "o_old",
+          "at": 1799395199999
+        },
+        {
+          "openId": "o_edge",
+          "at": 1799395200000
+        },
+        {
+          "openId": "o_new",
+          "at": 1800000000000
+        }
+      ],
+      "expected": [
+        "o_edge",
+        "o_new"
+      ]
+    },
+    {
+      "name": "caps the queue, dropping the oldest",
+      "now": 1800000000000,
+      "queue": [
+        {
+          "openId": "o_0",
+          "at": 1799999895000
+        },
+        {
+          "openId": "o_1",
+          "at": 1799999896000
+        },
+        {
+          "openId": "o_2",
+          "at": 1799999897000
+        },
+        {
+          "openId": "o_3",
+          "at": 1799999898000
+        },
+        {
+          "openId": "o_4",
+          "at": 1799999899000
+        },
+        {
+          "openId": "o_5",
+          "at": 1799999900000
+        },
+        {
+          "openId": "o_6",
+          "at": 1799999901000
+        },
+        {
+          "openId": "o_7",
+          "at": 1799999902000
+        },
+        {
+          "openId": "o_8",
+          "at": 1799999903000
+        },
+        {
+          "openId": "o_9",
+          "at": 1799999904000
+        },
+        {
+          "openId": "o_10",
+          "at": 1799999905000
+        },
+        {
+          "openId": "o_11",
+          "at": 1799999906000
+        },
+        {
+          "openId": "o_12",
+          "at": 1799999907000
+        },
+        {
+          "openId": "o_13",
+          "at": 1799999908000
+        },
+        {
+          "openId": "o_14",
+          "at": 1799999909000
+        },
+        {
+          "openId": "o_15",
+          "at": 1799999910000
+        },
+        {
+          "openId": "o_16",
+          "at": 1799999911000
+        },
+        {
+          "openId": "o_17",
+          "at": 1799999912000
+        },
+        {
+          "openId": "o_18",
+          "at": 1799999913000
+        },
+        {
+          "openId": "o_19",
+          "at": 1799999914000
+        },
+        {
+          "openId": "o_20",
+          "at": 1799999915000
+        },
+        {
+          "openId": "o_21",
+          "at": 1799999916000
+        },
+        {
+          "openId": "o_22",
+          "at": 1799999917000
+        },
+        {
+          "openId": "o_23",
+          "at": 1799999918000
+        },
+        {
+          "openId": "o_24",
+          "at": 1799999919000
+        },
+        {
+          "openId": "o_25",
+          "at": 1799999920000
+        },
+        {
+          "openId": "o_26",
+          "at": 1799999921000
+        },
+        {
+          "openId": "o_27",
+          "at": 1799999922000
+        },
+        {
+          "openId": "o_28",
+          "at": 1799999923000
+        },
+        {
+          "openId": "o_29",
+          "at": 1799999924000
+        },
+        {
+          "openId": "o_30",
+          "at": 1799999925000
+        },
+        {
+          "openId": "o_31",
+          "at": 1799999926000
+        },
+        {
+          "openId": "o_32",
+          "at": 1799999927000
+        },
+        {
+          "openId": "o_33",
+          "at": 1799999928000
+        },
+        {
+          "openId": "o_34",
+          "at": 1799999929000
+        },
+        {
+          "openId": "o_35",
+          "at": 1799999930000
+        },
+        {
+          "openId": "o_36",
+          "at": 1799999931000
+        },
+        {
+          "openId": "o_37",
+          "at": 1799999932000
+        },
+        {
+          "openId": "o_38",
+          "at": 1799999933000
+        },
+        {
+          "openId": "o_39",
+          "at": 1799999934000
+        },
+        {
+          "openId": "o_40",
+          "at": 1799999935000
+        },
+        {
+          "openId": "o_41",
+          "at": 1799999936000
+        },
+        {
+          "openId": "o_42",
+          "at": 1799999937000
+        },
+        {
+          "openId": "o_43",
+          "at": 1799999938000
+        },
+        {
+          "openId": "o_44",
+          "at": 1799999939000
+        },
+        {
+          "openId": "o_45",
+          "at": 1799999940000
+        },
+        {
+          "openId": "o_46",
+          "at": 1799999941000
+        },
+        {
+          "openId": "o_47",
+          "at": 1799999942000
+        },
+        {
+          "openId": "o_48",
+          "at": 1799999943000
+        },
+        {
+          "openId": "o_49",
+          "at": 1799999944000
+        },
+        {
+          "openId": "o_50",
+          "at": 1799999945000
+        },
+        {
+          "openId": "o_51",
+          "at": 1799999946000
+        },
+        {
+          "openId": "o_52",
+          "at": 1799999947000
+        },
+        {
+          "openId": "o_53",
+          "at": 1799999948000
+        },
+        {
+          "openId": "o_54",
+          "at": 1799999949000
+        },
+        {
+          "openId": "o_55",
+          "at": 1799999950000
+        },
+        {
+          "openId": "o_56",
+          "at": 1799999951000
+        },
+        {
+          "openId": "o_57",
+          "at": 1799999952000
+        },
+        {
+          "openId": "o_58",
+          "at": 1799999953000
+        },
+        {
+          "openId": "o_59",
+          "at": 1799999954000
+        },
+        {
+          "openId": "o_60",
+          "at": 1799999955000
+        },
+        {
+          "openId": "o_61",
+          "at": 1799999956000
+        },
+        {
+          "openId": "o_62",
+          "at": 1799999957000
+        },
+        {
+          "openId": "o_63",
+          "at": 1799999958000
+        },
+        {
+          "openId": "o_64",
+          "at": 1799999959000
+        },
+        {
+          "openId": "o_65",
+          "at": 1799999960000
+        },
+        {
+          "openId": "o_66",
+          "at": 1799999961000
+        },
+        {
+          "openId": "o_67",
+          "at": 1799999962000
+        },
+        {
+          "openId": "o_68",
+          "at": 1799999963000
+        },
+        {
+          "openId": "o_69",
+          "at": 1799999964000
+        },
+        {
+          "openId": "o_70",
+          "at": 1799999965000
+        },
+        {
+          "openId": "o_71",
+          "at": 1799999966000
+        },
+        {
+          "openId": "o_72",
+          "at": 1799999967000
+        },
+        {
+          "openId": "o_73",
+          "at": 1799999968000
+        },
+        {
+          "openId": "o_74",
+          "at": 1799999969000
+        },
+        {
+          "openId": "o_75",
+          "at": 1799999970000
+        },
+        {
+          "openId": "o_76",
+          "at": 1799999971000
+        },
+        {
+          "openId": "o_77",
+          "at": 1799999972000
+        },
+        {
+          "openId": "o_78",
+          "at": 1799999973000
+        },
+        {
+          "openId": "o_79",
+          "at": 1799999974000
+        },
+        {
+          "openId": "o_80",
+          "at": 1799999975000
+        },
+        {
+          "openId": "o_81",
+          "at": 1799999976000
+        },
+        {
+          "openId": "o_82",
+          "at": 1799999977000
+        },
+        {
+          "openId": "o_83",
+          "at": 1799999978000
+        },
+        {
+          "openId": "o_84",
+          "at": 1799999979000
+        },
+        {
+          "openId": "o_85",
+          "at": 1799999980000
+        },
+        {
+          "openId": "o_86",
+          "at": 1799999981000
+        },
+        {
+          "openId": "o_87",
+          "at": 1799999982000
+        },
+        {
+          "openId": "o_88",
+          "at": 1799999983000
+        },
+        {
+          "openId": "o_89",
+          "at": 1799999984000
+        },
+        {
+          "openId": "o_90",
+          "at": 1799999985000
+        },
+        {
+          "openId": "o_91",
+          "at": 1799999986000
+        },
+        {
+          "openId": "o_92",
+          "at": 1799999987000
+        },
+        {
+          "openId": "o_93",
+          "at": 1799999988000
+        },
+        {
+          "openId": "o_94",
+          "at": 1799999989000
+        },
+        {
+          "openId": "o_95",
+          "at": 1799999990000
+        },
+        {
+          "openId": "o_96",
+          "at": 1799999991000
+        },
+        {
+          "openId": "o_97",
+          "at": 1799999992000
+        },
+        {
+          "openId": "o_98",
+          "at": 1799999993000
+        },
+        {
+          "openId": "o_99",
+          "at": 1799999994000
+        },
+        {
+          "openId": "o_100",
+          "at": 1799999995000
+        },
+        {
+          "openId": "o_101",
+          "at": 1799999996000
+        },
+        {
+          "openId": "o_102",
+          "at": 1799999997000
+        },
+        {
+          "openId": "o_103",
+          "at": 1799999998000
+        },
+        {
+          "openId": "o_104",
+          "at": 1799999999000
+        }
+      ],
+      "expected": [
+        "o_5",
+        "o_6",
+        "o_7",
+        "o_8",
+        "o_9",
+        "o_10",
+        "o_11",
+        "o_12",
+        "o_13",
+        "o_14",
+        "o_15",
+        "o_16",
+        "o_17",
+        "o_18",
+        "o_19",
+        "o_20",
+        "o_21",
+        "o_22",
+        "o_23",
+        "o_24",
+        "o_25",
+        "o_26",
+        "o_27",
+        "o_28",
+        "o_29",
+        "o_30",
+        "o_31",
+        "o_32",
+        "o_33",
+        "o_34",
+        "o_35",
+        "o_36",
+        "o_37",
+        "o_38",
+        "o_39",
+        "o_40",
+        "o_41",
+        "o_42",
+        "o_43",
+        "o_44",
+        "o_45",
+        "o_46",
+        "o_47",
+        "o_48",
+        "o_49",
+        "o_50",
+        "o_51",
+        "o_52",
+        "o_53",
+        "o_54",
+        "o_55",
+        "o_56",
+        "o_57",
+        "o_58",
+        "o_59",
+        "o_60",
+        "o_61",
+        "o_62",
+        "o_63",
+        "o_64",
+        "o_65",
+        "o_66",
+        "o_67",
+        "o_68",
+        "o_69",
+        "o_70",
+        "o_71",
+        "o_72",
+        "o_73",
+        "o_74",
+        "o_75",
+        "o_76",
+        "o_77",
+        "o_78",
+        "o_79",
+        "o_80",
+        "o_81",
+        "o_82",
+        "o_83",
+        "o_84",
+        "o_85",
+        "o_86",
+        "o_87",
+        "o_88",
+        "o_89",
+        "o_90",
+        "o_91",
+        "o_92",
+        "o_93",
+        "o_94",
+        "o_95",
+        "o_96",
+        "o_97",
+        "o_98",
+        "o_99",
+        "o_100",
+        "o_101",
+        "o_102",
+        "o_103",
+        "o_104"
+      ]
+    },
+    {
+      "name": "empty",
+      "now": 1800000000000,
+      "queue": [],
+      "expected": []
+    }
+  ],
+  "retry": [
+    {
+      "status": null,
+      "expected": true
+    },
+    {
+      "status": 0,
+      "expected": false
+    },
+    {
+      "status": 200,
+      "expected": false
+    },
+    {
+      "status": 202,
+      "expected": false
+    },
+    {
+      "status": 400,
+      "expected": false
+    },
+    {
+      "status": 401,
+      "expected": false
+    },
+    {
+      "status": 404,
+      "expected": false
+    },
+    {
+      "status": 429,
+      "expected": true
+    },
+    {
+      "status": 500,
+      "expected": true
+    },
+    {
+      "status": 502,
+      "expected": true
+    },
+    {
+      "status": 503,
+      "expected": true
     }
   ]
 }

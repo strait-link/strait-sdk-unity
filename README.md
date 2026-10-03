@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](../).
-Version **0.3.0**. It is at parity with the React Native reference SDK
+Version **0.4.0**. It is at parity with the React Native reference SDK
 ([`shared-spec/SDK-CONTRACT.md`](../shared-spec/SDK-CONTRACT.md)).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -19,19 +19,42 @@ built-in writer and parser (`StraitJson`).
 
 | # | Behaviour | Status |
 |---|---|---|
-| B1 | `publishableKey` in every body (`/v1/match`, `/v1/referrer`, `/v1/resolve`, `/v1/event`, `/v1/debug/fingerprint`) | ✓ |
+| B1 | `publishableKey` in every body (`/v1/match`, `/v1/referrer`, `/v1/resolve`, `/v1/open`, `/v1/event`, `/v1/debug/fingerprint`) | ✓ |
 | B2 | `StraitCore.BrowserScreenWidth` = `ceil(w - 0.001)` | ✓ (the game supplies the width, see below) |
 | B3 | Short-link hosts (endpoint + `LinkHosts`, via `NormalizeLinkHosts`) → `POST /v1/resolve {publishableKey,url,platform}` | ✓ |
-| B4 | `ClassifyUrl` (custom scheme → `https://host/path?q`) | ✓ |
+| B4 | `ClassifyUrl` (custom scheme → `https://host/path?q`; `strait_click` tap id removed via `TakeClickId`, returned as `ClickId`) | ✓ |
 | B5 | `closed` for the launch URL, else `AppStateTracker` (2000 / 1000 ms) | ✓ |
-| B6 | Deferred check once per install (`strait.deferredChecked`), skipped but marked when launched by a link | ✓ |
-| B7 | Android: referrer `strait_link` → `/v1/referrer`, else or on a miss → `/v1/match` | ✓ (the game supplies the referrer) |
-| B8 | iOS: `/v1/match` with device fields | ✓ |
+| B6 | Deferred check once per install (`strait.deferredChecked`), skipped but marked when launched by a link; marked only once the engine answered (no answer / 429 / 5xx → `reason:"network"`, retried next launch); `CheckDeferred()` sends no `openId` | ✓ |
+| B7 | Android: referrer `strait_link` → `/v1/referrer {linkId, clickId, openId, at}`, else or on a miss → `/v1/match` (same `openId`) | ✓ (the game supplies the referrer) |
+| B8 | iOS: `/v1/match` with device fields + `openId`, `at` | ✓ |
 | B9 | One `LinkEvent` type, replayed to late `OnLink` subscribers; `OnLinkStart` with the same id | ✓ |
 | B10 | Never throws; network failure → `matched:false, reason:"network"` | ✓ |
 | B11 | All JSON goes through an escaping writer | ✓ |
 | B12 | `SplitUrl` matches the vectors exactly (no `System.Uri`) | ✓ |
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
+| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()` | ✓ |
+
+### What Strait records automatically (no extra code)
+
+Every time a link opens the game, the client reports it once (contract B14):
+
+| How the game opened | Reported via | Joined to |
+|---|---|---|
+| Verified link tapped in WhatsApp, Gmail, Messages… | `/v1/resolve` (the lookup is the report) | the link; also counted as a tap |
+| Browser handed off to the game (`yourgame://…`) | `/v1/open` | the exact tap (`strait_click`, removed before `OnLink` sees the URL) |
+| First open after a Play install | `/v1/referrer` | the exact tap that sent the user to the store |
+| First open after an App Store install | `/v1/match` | the matched tap |
+| Your own https links | `/v1/open` | host + path only (never the query) |
+
+Reports that can't be sent (offline, server busy) are saved in `Storage` (the same
+store as the deferred flag, e.g. `PlayerPrefsStore`) and retried on the next `Start`,
+whenever `OnAppState("active")` is called (so wire `OnApplicationPause` /
+`OnApplicationFocus` as shown below), and after any report that gets through, for up
+to 7 days (max 100). The engine de-duplicates by open id, so nothing is counted twice.
+Navigation never waits for a report. The first launch of an install is marked as
+such, so dashboards can tell **new users** (installed and opened) from **existing
+users** (already had the game). The deferred check is only marked done once the
+server answered, so an offline first launch is retried on the next launch.
 
 ## Install
 
@@ -85,7 +108,8 @@ public class StraitLinks : MonoBehaviour
         await Client.Start(Application.absoluteURL);
     }
 
-    // Lifecycle → app-state labels (background vs foreground).
+    // Lifecycle → app-state labels (background vs foreground). Coming back to the
+    // front ("active") also sends any open reports saved while offline.
     void OnApplicationPause(bool paused) => Client?.OnAppState(paused ? AppLifecycle.Background : AppLifecycle.Active);
     void OnApplicationFocus(bool focused) => Client?.OnAppState(focused ? AppLifecycle.Active : AppLifecycle.Inactive);
     void OnDestroy() => Client?.Stop();
@@ -119,7 +143,7 @@ public sealed class PlayerPrefsStore : IKeyValueStore
     public Task SetItemAsync(string key, string value)
     {
         PlayerPrefs.SetString(key, value);
-        PlayerPrefs.Save();                     // persist now; the deferred flag must survive a crash
+        PlayerPrefs.Save();                     // persist now; the deferred flag and saved open reports must survive a crash
         return Task.CompletedTask;
     }
 }
@@ -261,12 +285,14 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 
 ## API summary
 
-- `StraitCore`: `BrowserScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ClassifyUrl`, `NormalizeLinkHosts`
-  (pure, vector-tested). `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).
+- `StraitCore`: `BrowserScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
+  `ClassifyUrl`, `NormalizeLinkHosts`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
+  (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
+  `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId)`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the same fields and wire values as the React Native SDK.
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is

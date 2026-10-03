@@ -81,7 +81,7 @@ namespace Strait
         public string Endpoint { get; set; } = "";
         /// <summary>Extra hosts serving your short links (custom domains): "go.brand.com" or "https://go.brand.com".</summary>
         public IList<string> LinkHosts { get; set; } = new List<string>();
-        /// <summary>Persists "deferred check done" across launches (e.g. a PlayerPrefs store). Default: in-memory.</summary>
+        /// <summary>Persists "deferred check done" and unsent open reports across launches (e.g. a PlayerPrefs store). Default: in-memory.</summary>
         public IKeyValueStore? Storage { get; set; }
         /// <summary>Android: returns the Play Install Referrer string, or null. Only called when Platform is "android".</summary>
         public Func<Task<string?>>? InstallReferrer { get; set; }
@@ -98,6 +98,7 @@ namespace Strait
     /// <summary>One event type for every link case (B9). Wire-identical to the React Native SDK's LinkEvent.</summary>
     public sealed class LinkEvent
     {
+        /// <summary>Unique per open; also the id Strait records this open under (B14).</summary>
         public string Id { get; internal set; } = "";
         /// <summary>"direct" = opened by a link; "deferred" = link tapped before install.</summary>
         public string Kind { get; internal set; } = "";
@@ -136,10 +137,14 @@ namespace Strait
     /// dependency. The game feeds it URLs and lifecycle changes (see README); it never throws
     /// from link handling (B10). Continuations resume on the caller's SynchronizationContext,
     /// so when called from Unity's main thread, events are raised on the main thread.
+    /// Every open is reported to Strait exactly once (B14); reports that don't get through are
+    /// saved in <see cref="StraitConfig.Storage"/> and retried.
     /// </summary>
     public sealed class StraitClient
     {
         public const string DeferredFlag = "strait.deferredChecked";
+        /// <summary>Storage key of the unsent open reports (JSON array).</summary>
+        public const string QueueKey = "strait.pendingOpens";
 
         private readonly StraitConfig _config;
         private readonly string _base;
@@ -152,7 +157,9 @@ namespace Strait
         private readonly List<LinkEvent> _events = new List<LinkEvent>();
         private readonly List<Action<LinkEvent>> _listeners = new List<Action<LinkEvent>>();
         private readonly List<Action<LinkStart>> _startListeners = new List<Action<LinkStart>>();
-        private int _seq;
+        // Queue operations run one at a time (storage is async).
+        private readonly SemaphoreSlim _queueLock = new SemaphoreSlim(1, 1);
+        private Task? _flushing;
         private bool _started;
         private volatile bool _stopped;
 
@@ -198,8 +205,9 @@ namespace Strait
 
         /// <summary>
         /// Handle the launch URL (Unity: Application.absoluteURL; null/empty if none) as "closed",
-        /// then run the deferred check once per install (B6) — skipped, but still marked done,
-        /// when the first launch was itself opened by a link. Call once; later calls are no-ops.
+        /// or else run the deferred check once per install (B6): skipped, but still marked done,
+        /// when the first launch was itself opened by a link; marked done only once the engine
+        /// answered. Then sends any saved open reports. Call once; later calls are no-ops.
         /// </summary>
         public async Task Start(string? initialUrl)
         {
@@ -210,16 +218,30 @@ namespace Strait
                 _stopped = false;
             }
             bool hasInitial = !string.IsNullOrEmpty(initialUrl);
-            if (hasInitial) await HandleUrlInternal(initialUrl!, LinkAppStates.Closed);
-
             string? flag;
             try { flag = await _storage.GetItemAsync(DeferredFlag); }
-            catch { return; } // unreadable storage: don't risk a stale deferred jump on every launch
-            if (flag == "1") return;
+            catch { flag = null; }
+            bool firstLaunch = flag != "1";
+            if (hasInitial)
+            {
+                // Opened by a link on first launch = the user's intent right now: no deferred
+                // check, but this open still counts as the install's first.
+                if (firstLaunch) await SetFlag();
+                await HandleUrlInternal(initialUrl!, LinkAppStates.Closed, firstLaunch);
+            }
+            else if (firstLaunch)
+            {
+                // Marked done only once the engine answered: offline → next launch.
+                var e = await RunDeferred(true);
+                if (e.Reason != "network") await SetFlag();
+            }
+            _ = Flush();
+        }
+
+        private async Task SetFlag()
+        {
             try { await _storage.SetItemAsync(DeferredFlag, "1"); }
             catch { /* best effort */ }
-            // Opened by a link on first launch = the user's intent right now.
-            if (!hasInitial) await RunDeferred();
         }
 
         /// <summary>
@@ -232,11 +254,15 @@ namespace Strait
             return await HandleUrlInternal(raw, _tracker.Classify(Now()));
         }
 
-        /// <summary>Feed lifecycle changes: "active", "background" or "inactive" (<see cref="AppLifecycle"/>).</summary>
+        /// <summary>
+        /// Feed lifecycle changes: "active", "background" or "inactive" (<see cref="AppLifecycle"/>).
+        /// Becoming active also sends any saved open reports.
+        /// </summary>
         public void OnAppState(string state, long nowMs)
         {
             if (_stopped || state == null) return;
             _tracker.OnState(state, nowMs);
+            if (state == AppLifecycle.Active) _ = Flush();
         }
 
         /// <summary>Same as <see cref="OnAppState(string, long)"/> using the configured clock.</summary>
@@ -248,8 +274,17 @@ namespace Strait
             lock (_gate) { _stopped = true; _started = false; }
         }
 
-        /// <summary>Re-run the deferred check now (debugging); doesn't touch the once-per-install flag.</summary>
-        public Task<LinkEvent> CheckDeferred() => RunDeferred();
+        /// <summary>
+        /// Re-run the deferred check now (debugging); doesn't touch the once-per-install flag and
+        /// sends no openId, so it never adds an install.
+        /// </summary>
+        public Task<LinkEvent> CheckDeferred() => RunDeferred(false);
+
+        /// <summary>Open reports saved while offline, waiting to be sent (debugging).</summary>
+        public Task<int> PendingOpenReports() => Serial(async () => (await ReadQueue()).Count);
+
+        /// <summary>Send saved open reports now (also happens on Start and when the app becomes active).</summary>
+        public Task FlushOpenReports() => Flush();
 
         // ------------------------------------------------------------------ fingerprint + events
 
@@ -305,12 +340,11 @@ namespace Strait
             try { return _now(); } catch { return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); }
         }
 
-        private string NewId(long at) => "evt_" + at + "_" + Interlocked.Increment(ref _seq);
-
-        private async Task<LinkEvent> HandleUrlInternal(string raw, string appState)
+        private async Task<LinkEvent> HandleUrlInternal(string raw, string appState, bool firstLaunch = false)
         {
             long t0 = Now();
-            var id = NewId(t0);
+            var id = StraitCore.NewOpenId(t0);
+            var platform = _config.Platform;
             Announce(new LinkStart { Id = id, Kind = "direct", AppState = appState, RawUrl = raw, At = t0 });
             var ev = new LinkEvent { Id = id, Kind = "direct", Route = LinkRoutes.AppLink, AppState = appState, RawUrl = raw, At = t0 };
             try
@@ -323,28 +357,46 @@ namespace Strait
                 }
                 else if (c.NeedsResolve)
                 {
+                    // The lookup is also the open report (openId); the engine says whether it
+                    // recorded it, and anything short of that is retried via /v1/open.
+                    var report = NewReport(id, "direct", LinkRoutes.AppLink, appState, platform, raw, null, false, firstLaunch, t0);
                     try
                     {
                         var res = await Call("POST", "/v1/resolve", new List<KeyValuePair<string, object?>>
                         {
                             Kv("publishableKey", _config.PublishableKey),
                             Kv("url", raw),
-                            Kv("platform", _config.Platform),
+                            Kv("platform", platform),
+                            Kv("openId", id),
+                            Kv("appState", appState),
+                            Kv("firstLaunch", firstLaunch),
+                            Kv("at", t0),
                         });
                         bool matched = IsTrue(res.Json, "matched");
                         ev.Matched = matched;
                         ev.Reason = matched ? null : (Str(res.Json, "reason") ?? Str(res.Json, "error"));
                         if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
                         ev.LinkId = Str(res.Json, "linkId");
+                        if (!IsTrue(res.Json, "recorded"))
+                        {
+                            report["matched"] = matched;
+                            report["reason"] = ev.Reason;
+                            report["linkId"] = ev.LinkId;
+                            _ = Report(report);
+                        }
                     }
                     catch
                     {
                         ev.Matched = false;
                         ev.Reason = "network";
+                        report["reason"] = "network";
+                        _ = Enqueue(report);
                     }
                 }
                 else
                 {
+                    // Navigation never waits for the report.
+                    _ = Report(NewReport(id, "direct", c.Route, appState, platform, c.Url, c.ClickId, true, firstLaunch, t0));
                     ev.Route = c.Route;
                     ev.Matched = true;
                     ev.Url = c.Url;
@@ -361,10 +413,14 @@ namespace Strait
             return Emit(ev);
         }
 
-        private async Task<LinkEvent> RunDeferred()
+        /// <summary>
+        /// The deferred check. <paramref name="record"/> (the once-per-install run) sends the openId
+        /// so the engine records this first open + install exactly once; the debug re-check doesn't.
+        /// </summary>
+        private async Task<LinkEvent> RunDeferred(bool record)
         {
             long t0 = Now();
-            var id = NewId(t0);
+            var id = StraitCore.NewOpenId(t0);
             Announce(new LinkStart { Id = id, Kind = "deferred", AppState = LinkAppStates.Closed, At = t0 });
             var ev = new LinkEvent { Id = id, Kind = "deferred", Route = LinkRoutes.Fingerprint, AppState = LinkAppStates.Closed, At = t0 };
             try
@@ -378,12 +434,15 @@ namespace Strait
                     var linkId = StraitCore.ParseStraitLink(referrer);
                     if (linkId != null)
                     {
-                        var res = await Call("POST", "/v1/referrer", new List<KeyValuePair<string, object?>>
+                        var body = new List<KeyValuePair<string, object?>>
                         {
                             Kv("publishableKey", _config.PublishableKey),
                             Kv("linkId", linkId),
+                            Kv("clickId", StraitCore.ParseStraitClick(referrer)),
                             Kv("platform", "android"),
-                        });
+                        };
+                        if (record) { body.Add(Kv("openId", id)); body.Add(Kv("at", t0)); }
+                        var res = await Answered("/v1/referrer", body);
                         if (IsTrue(res.Json, "matched"))
                         {
                             ev.Route = LinkRoutes.InstallReferrer;
@@ -402,7 +461,8 @@ namespace Strait
                         Kv("platform", _config.Platform),
                     };
                     AddDevice(fields);
-                    var res = await Call("POST", "/v1/match", fields);
+                    if (record) { fields.Add(Kv("openId", id)); fields.Add(Kv("at", t0)); }
+                    var res = await Answered("/v1/match", fields);
                     bool matched = IsTrue(res.Json, "matched");
                     ev.Matched = matched;
                     ev.Reason = matched ? null : "no_match";
@@ -419,6 +479,133 @@ namespace Strait
             }
             ev.Ms = Now() - t0;
             return Emit(ev);
+        }
+
+        /// <summary>Like <see cref="Call"/>, but no answer, 429 or 5xx throws (= try again next launch).</summary>
+        private async Task<Response> Answered(string path, List<KeyValuePair<string, object?>> body)
+        {
+            var res = await Call("POST", path, body);
+            if (StraitCore.ShouldRetryReport(res.Status)) throw new HttpRequestException("HTTP " + res.Status);
+            return res;
+        }
+
+        // ------------------------------------------------------------------ open reports (B14)
+
+        /// <summary>One app open as reported to POST /v1/open. Null values are left out of the JSON.</summary>
+        private static Dictionary<string, object?> NewReport(string openId, string kind, string route, string appState,
+            string platform, string? url, string? clickId, bool matched, bool firstLaunch, long at) =>
+            new Dictionary<string, object?>
+            {
+                ["openId"] = openId, ["kind"] = kind, ["route"] = route, ["appState"] = appState,
+                ["platform"] = platform, ["url"] = url, ["clickId"] = clickId, ["linkId"] = null,
+                ["matched"] = matched, ["reason"] = null, ["firstLaunch"] = firstLaunch, ["at"] = at,
+            };
+
+        private async Task<T> Serial<T>(Func<Task<T>> fn)
+        {
+            await _queueLock.WaitAsync();
+            try { return await fn(); }
+            finally { _queueLock.Release(); }
+        }
+
+        private async Task<List<Dictionary<string, object?>>> ReadQueue()
+        {
+            var q = new List<Dictionary<string, object?>>();
+            try
+            {
+                var text = await _storage.GetItemAsync(QueueKey);
+                if (StraitJson.Parse(text ?? "[]") is List<object?> items)
+                    foreach (var item in items) if (item is Dictionary<string, object?> r) q.Add(r);
+            }
+            catch { /* unreadable → empty */ }
+            return q;
+        }
+
+        private async Task WriteQueue(List<Dictionary<string, object?>> q)
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                StraitJson.WriteValue(sb, q, 0);
+                await _storage.SetItemAsync(QueueKey, sb.ToString());
+            }
+            catch { /* best effort */ }
+        }
+
+        private static long AtOf(Dictionary<string, object?> r) =>
+            r.TryGetValue("at", out var v) ? v switch { long l => l, int i => i, double d => (long)d, _ => 0 } : 0;
+
+        private List<Dictionary<string, object?>> Prune(List<Dictionary<string, object?>> q) => StraitCore.PruneOpenQueue(q, Now(), AtOf);
+
+        private Task Enqueue(Dictionary<string, object?> report) =>
+            Serial(async () =>
+            {
+                var q = await ReadQueue();
+                q.Add(report);
+                await WriteQueue(Prune(q));
+                return true;
+            });
+
+        /// <summary>POST /v1/open; the HTTP status, or null when there was no answer.</summary>
+        private async Task<int?> SendReport(Dictionary<string, object?> report)
+        {
+            try
+            {
+                var body = new List<KeyValuePair<string, object?>> { Kv("publishableKey", _config.PublishableKey) };
+                foreach (var kv in report) if (kv.Key != "publishableKey") body.Add(kv);
+                return (await Call("POST", "/v1/open", body)).Status;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>Report an open now; keep it for retry if it doesn't get through. Never throws.</summary>
+        private async Task Report(Dictionary<string, object?> report)
+        {
+            try
+            {
+                var status = await SendReport(report);
+                if (StraitCore.ShouldRetryReport(status)) await Enqueue(report);
+                else _ = Flush(); // the network works: send anything saved earlier
+            }
+            catch { /* never throw */ }
+        }
+
+        /// <summary>Send the saved reports in order; stop at the first one that gets no answer.</summary>
+        private Task Flush()
+        {
+            TaskCompletionSource<bool> done;
+            lock (_gate)
+            {
+                if (_flushing != null && !_flushing.IsCompleted) return _flushing; // one flush at a time
+                done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _flushing = done.Task;
+            }
+            _ = FlushCore(done);
+            return done.Task;
+        }
+
+        private async Task FlushCore(TaskCompletionSource<bool> done)
+        {
+            try
+            {
+                await Serial(async () =>
+                {
+                    var keep = new List<Dictionary<string, object?>>();
+                    bool offline = false;
+                    foreach (var rep in Prune(await ReadQueue()))
+                    {
+                        // Once one gets no answer at all, keep the rest for later.
+                        if (offline) { keep.Add(rep); continue; }
+                        var status = await SendReport(rep);
+                        offline = status == null;
+                        if (StraitCore.ShouldRetryReport(status)) keep.Add(rep);
+                    }
+                    await WriteQueue(keep);
+                    return true;
+                });
+            }
+            catch { /* never throw */ }
+            finally { done.TrySetResult(true); }
         }
 
         private void AddDevice(List<KeyValuePair<string, object?>> fields)

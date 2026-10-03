@@ -48,19 +48,22 @@ namespace Strait
 
     /// <summary>
     /// Result of <see cref="StraitCore.ClassifyUrl"/>. When <see cref="NeedsResolve"/> is true the
-    /// URL is a Strait short link (ask /v1/resolve) and Url/Path/Params are null.
+    /// URL is a Strait short link (ask /v1/resolve) and Url/Path/Params/ClickId are null.
     /// </summary>
     public sealed class ClassifiedUrl
     {
-        public ClassifiedUrl(string route, bool needsResolve, string? url, string? path, IReadOnlyDictionary<string, string>? @params)
+        public ClassifiedUrl(string route, bool needsResolve, string? url, string? path, IReadOnlyDictionary<string, string>? @params,
+            string? clickId = null)
         {
-            Route = route; NeedsResolve = needsResolve; Url = url; Path = path; Params = @params;
+            Route = route; NeedsResolve = needsResolve; Url = url; Path = path; Params = @params; ClickId = clickId;
         }
         public string Route { get; }
         public bool NeedsResolve { get; }
         public string? Url { get; }
         public string? Path { get; }
         public IReadOnlyDictionary<string, string>? Params { get; }
+        /// <summary>Tap id from a Strait hand-off (removed from Url/Params), else null.</summary>
+        public string? ClickId { get; }
     }
 
     /// <summary>
@@ -147,17 +150,59 @@ namespace Strait
         }
 
         /// <summary>The strait_link id inside a Play Install Referrer string, or null.</summary>
-        public static string? ParseStraitLink(string? referrer)
+        public static string? ParseStraitLink(string? referrer) => ReferrerParam(referrer, "strait_link");
+
+        /// <summary>
+        /// The tap id (strait_click) inside a Play Install Referrer string, or null.
+        /// Joins the install to the exact tap that sent the user to the store.
+        /// </summary>
+        public static string? ParseStraitClick(string? referrer)
+        {
+            var v = ReferrerParam(referrer, "strait_click");
+            return v != null && ClickIdRe.IsMatch(v) ? v : null;
+        }
+
+        private static string? ReferrerParam(string? referrer, string key)
         {
             if (string.IsNullOrEmpty(referrer)) return null;
             foreach (var pair in referrer!.Split('&'))
             {
                 int i = pair.IndexOf('=');
-                if (i < 0 || pair.Substring(0, i) != "strait_link") continue;
+                if (i < 0 || pair.Substring(0, i) != key) continue;
                 var v = Decode(pair.Substring(i + 1));
-                return v.Length == 0 ? null : v; // first strait_link wins, even if empty
+                return v.Length == 0 ? null : v; // first match wins, even if empty
             }
             return null;
+        }
+
+        // JS: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i — a tap id as Strait issues it (uuid).
+        private static readonly Regex ClickIdRe = new Regex(
+            @"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\z", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// Remove every <c>strait_click</c> parameter from a URL's query, keeping the rest of the URL
+        /// byte-for-byte (fragment included). Returns the cleaned URL and the tap id (lower-cased;
+        /// null when absent or malformed). The app never sees the tap id.
+        /// </summary>
+        public static (string Url, string? ClickId) TakeClickId(string raw)
+        {
+            var s = JsTrim(raw);
+            int hash = s.IndexOf('#');
+            var beforeHash = hash < 0 ? s : s.Substring(0, hash);
+            var frag = hash < 0 ? "" : s.Substring(hash);
+            int q = beforeHash.IndexOf('?');
+            if (q < 0) return (s, null);
+            string? clickId = null;
+            var kept = new List<string>();
+            foreach (var pair in beforeHash.Substring(q + 1).Split('&'))
+            {
+                int i = pair.IndexOf('=');
+                if (Decode(i < 0 ? pair : pair.Substring(0, i)) != "strait_click") { kept.Add(pair); continue; }
+                var v = Decode(i < 0 ? "" : pair.Substring(i + 1));
+                if (ClickIdRe.IsMatch(v)) clickId = v.ToLowerInvariant();
+            }
+            var query = string.Join("&", kept);
+            return (beforeHash.Substring(0, q) + (query.Length > 0 ? "?" + query : "") + frag, clickId);
         }
 
         /// <summary>
@@ -165,24 +210,73 @@ namespace Strait
         /// https on a Strait link host → short link (needs /v1/resolve);
         /// other https → it IS the destination;
         /// yourapp://host/path (browser hand-off) → destination https://host/path.
+        /// A <c>strait_click</c> tap id is removed from the destination and returned apart.
         /// Null for anything that isn't a URL.
         /// </summary>
         public static ClassifiedUrl? ClassifyUrl(string? raw, IEnumerable<string> linkHosts)
         {
-            var p = SplitUrl(raw);
-            if (p == null) return null;
-            bool isWeb = p.Scheme == "https" || p.Scheme == "http";
+            var p0 = SplitUrl(raw);
+            if (p0 == null) return null;
+            bool isWeb = p0.Scheme == "https" || p0.Scheme == "http";
             if (isWeb)
             {
                 foreach (var h in linkHosts)
                 {
-                    if (h != null && h.ToLowerInvariant() == p.Host)
+                    if (h != null && h.ToLowerInvariant() == p0.Host)
                         return new ClassifiedUrl(LinkRoutes.AppLink, true, null, null, null);
                 }
             }
-            var trimmed = JsTrim(raw!);
-            var url = isWeb ? trimmed : SchemePrefixRe.Replace(trimmed, "https://", 1);
-            return new ClassifiedUrl(isWeb ? LinkRoutes.AppLink : LinkRoutes.CustomScheme, false, url, p.Path, p.Params);
+            var (clean, clickId) = TakeClickId(raw!);
+            var p = SplitUrl(clean)!;
+            var url = isWeb ? clean : SchemePrefixRe.Replace(clean, "https://", 1);
+            return new ClassifiedUrl(isWeb ? LinkRoutes.AppLink : LinkRoutes.CustomScheme, false, url, p.Path, p.Params, clickId);
+        }
+
+        /// <summary>Open reports waiting to be sent are kept at most this long (7 days)…</summary>
+        public const long OpenQueueMaxAgeMs = 7L * 24 * 60 * 60 * 1000;
+        /// <summary>…and at most this many (oldest dropped first).</summary>
+        public const int OpenQueueMax = 100;
+
+        /// <summary>
+        /// Prune a pending-report queue: drop reports older than <see cref="OpenQueueMaxAgeMs"/> (by
+        /// their <paramref name="at"/>), then keep the newest <see cref="OpenQueueMax"/>. Order is kept.
+        /// </summary>
+        public static List<T> PruneOpenQueue<T>(IEnumerable<T> queue, long now, Func<T, long> at)
+        {
+            var recent = new List<T>();
+            foreach (var r in queue) if (now - at(r) <= OpenQueueMaxAgeMs) recent.Add(r);
+            return recent.Count > OpenQueueMax ? recent.GetRange(recent.Count - OpenQueueMax, OpenQueueMax) : recent;
+        }
+
+        /// <summary>Whether a failed report should be kept for retry: no answer (null), 429 or 5xx.</summary>
+        public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
+
+        private const string OpenIdChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+        /// <summary>
+        /// A unique id for one link open (the engine de-duplicates retries by it):
+        /// <c>o_&lt;base36 ms&gt;_&lt;12 × [a-z0-9]&gt;</c>. <paramref name="random"/> returns [0, 1).
+        /// </summary>
+        public static string NewOpenId(long now, Func<double>? random = null)
+        {
+            random ??= DefaultRandom;
+            var sb = new StringBuilder("o_").Append(ToBase36(now)).Append('_');
+            for (int i = 0; i < 12; i++) sb.Append(OpenIdChars[(int)Math.Floor(random() * 36)]);
+            return sb.ToString();
+        }
+
+        private static readonly Random Rng = new Random();
+        private static double DefaultRandom() { lock (Rng) return Rng.NextDouble(); }
+
+        /// <summary>JS <c>n.toString(36)</c> for an integer.</summary>
+        internal static string ToBase36(long n)
+        {
+            if (n == 0) return "0";
+            var sb = new StringBuilder();
+            ulong u = n < 0 ? (ulong)(-(n + 1)) + 1 : (ulong)n;
+            while (u > 0) { sb.Insert(0, "0123456789abcdefghijklmnopqrstuvwxyz"[(int)(u % 36)]); u /= 36; }
+            if (n < 0) sb.Insert(0, '-');
+            return sb.ToString();
         }
 
         /// <summary>

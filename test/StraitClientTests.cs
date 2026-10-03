@@ -116,7 +116,7 @@ namespace Strait.Tests
             Assert.Equal("red", e.Params!["color"]);
             Assert.Equal("lnk_42", e.LinkId);
             Assert.Equal(1_000_000, e.At);
-            Assert.StartsWith("evt_1000000_", e.Id);
+            Assert.Matches("^o_lfls_[a-z0-9]{12}$", e.Id); // newOpenId(1_000_000)
 
             var call = h.Engine.Calls.Single(c => c.Path == "/v1/resolve");
             Assert.Equal("POST", call.Method);
@@ -184,7 +184,7 @@ namespace Strait.Tests
         }
 
         [Fact]
-        public async Task CustomSchemeHandOff_CarriesDestination_NoNetworkCall()
+        public async Task CustomSchemeHandOff_CarriesDestination_NoResolve()
         {
             var h = Make(new FakeEngine());
             await h.Strait.Start("straitlink://shop.example/p/42?color=red");
@@ -441,7 +441,7 @@ namespace Strait.Tests
             Assert.Equal("fingerprint", e.Route);
             Assert.False(e.Matched);
             Assert.Equal("network", e.Reason);
-            Assert.Equal("1", await h.Storage.GetItemAsync(StraitClient.DeferredFlag));
+            Assert.Null(await h.Storage.GetItemAsync(StraitClient.DeferredFlag)); // B6: retried next launch
         }
 
         [Fact]

@@ -27,8 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(1, v.GetProperty("version").GetInt32());
-            foreach (var section in new[] { "screenWidth", "splitUrl", "referrer", "classify", "linkHosts", "appState" })
+            Assert.Equal(2, v.GetProperty("version").GetInt32());
+            foreach (var section in new[] { "screenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
+                         "linkHosts", "appState", "openQueue", "retry" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -38,8 +39,13 @@ namespace Strait.Tests
             var c = Vectors().GetProperty("constants");
             Assert.Equal(AppStateTracker.ResumeWindowMs, c.GetProperty("RESUME_WINDOW_MS").GetInt32());
             Assert.Equal(AppStateTracker.TransientPauseMs, c.GetProperty("TRANSIENT_PAUSE_MS").GetInt32());
+            Assert.Equal(StraitCore.OpenQueueMax, c.GetProperty("OPEN_QUEUE_MAX").GetInt32());
+            Assert.Equal(StraitCore.OpenQueueMaxAgeMs, c.GetProperty("OPEN_QUEUE_MAX_AGE_MS").GetInt64());
+            Assert.Equal(4, c.EnumerateObject().Count());
             Assert.Equal(2000, AppStateTracker.ResumeWindowMs);
             Assert.Equal(1000, AppStateTracker.TransientPauseMs);
+            Assert.Equal(100, StraitCore.OpenQueueMax);
+            Assert.Equal(604_800_000L, StraitCore.OpenQueueMaxAgeMs);
         }
 
         [Fact]
@@ -88,6 +94,58 @@ namespace Strait.Tests
             }
         }
 
+        private static string? StrOrNull(JsonElement e) => e.ValueKind == JsonValueKind.Null ? null : e.GetString();
+
+        [Fact]
+        public void ParseStraitClickVectors()
+        {
+            foreach (var c in Vectors().GetProperty("referrerClick").EnumerateArray())
+            {
+                string? input = StrOrNull(c.GetProperty("input"));
+                string? expected = StrOrNull(c.GetProperty("expected"));
+                Assert.True(expected == StraitCore.ParseStraitClick(input), $"input='{input}'");
+            }
+        }
+
+        [Fact]
+        public void TakeClickIdVectors()
+        {
+            foreach (var c in Vectors().GetProperty("takeClickId").EnumerateArray())
+            {
+                var input = c.GetProperty("input").GetString()!;
+                var exp = c.GetProperty("expected");
+                Assert.Equal(2, exp.EnumerateObject().Count());
+                var (url, clickId) = StraitCore.TakeClickId(input);
+                Assert.True(exp.GetProperty("url").GetString() == url, $"url for '{input}': got '{url}'");
+                Assert.True(StrOrNull(exp.GetProperty("clickId")) == clickId, $"clickId for '{input}': got '{clickId}'");
+            }
+        }
+
+        [Fact]
+        public void PruneOpenQueueVectors()
+        {
+            foreach (var c in Vectors().GetProperty("openQueue").EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var queue = c.GetProperty("queue").EnumerateArray()
+                    .Select(r => (OpenId: r.GetProperty("openId").GetString()!, At: r.GetProperty("at").GetInt64())).ToList();
+                var got = StraitCore.PruneOpenQueue(queue, c.GetProperty("now").GetInt64(), r => r.At).Select(r => r.OpenId).ToList();
+                var expected = c.GetProperty("expected").EnumerateArray().Select(e => e.GetString()!).ToList();
+                Assert.True(expected.SequenceEqual(got), $"{name}: expected [{string.Join(",", expected)}] got [{string.Join(",", got)}]");
+            }
+        }
+
+        [Fact]
+        public void ShouldRetryReportVectors()
+        {
+            foreach (var c in Vectors().GetProperty("retry").EnumerateArray())
+            {
+                var st = c.GetProperty("status");
+                int? status = st.ValueKind == JsonValueKind.Null ? (int?)null : st.GetInt32();
+                Assert.True(c.GetProperty("expected").GetBoolean() == StraitCore.ShouldRetryReport(status), $"status={status}");
+            }
+        }
+
         [Fact]
         public void ClassifyUrlVectors()
         {
@@ -109,15 +167,18 @@ namespace Strait.Tests
                     Assert.Equal(needsResolve, got.NeedsResolve);
                     if (needsResolve)
                     {
+                        Assert.Equal(2, exp.EnumerateObject().Count());
                         Assert.Null(got.Url);
                         Assert.Null(got.Path);
                         Assert.Null(got.Params);
+                        Assert.Null(got.ClickId);
                     }
                     else
                     {
                         Assert.Equal(exp.GetProperty("url").GetString(), got.Url);
                         Assert.Equal(exp.GetProperty("path").GetString(), got.Path);
                         Assert.Equal(Dict(exp.GetProperty("params")), Dict(got.Params));
+                        Assert.True(StrOrNull(exp.GetProperty("clickId")) == got.ClickId, $"clickId for '{raw}'"); // present, possibly null
                     }
                 }
             }
@@ -170,6 +231,18 @@ namespace Strait.Tests
         public void DecodeMatchesJs(string input, string expected)
         {
             Assert.Equal(expected, StraitCore.Decode(input));
+        }
+
+        [Fact]
+        public void NewOpenId_Format()
+        {
+            var re = new System.Text.RegularExpressions.Regex("^o_[a-z0-9]+_[a-z0-9]{12}$");
+            var ids = Enumerable.Range(0, 50).Select(_ => StraitCore.NewOpenId(1_800_000_000_000)).ToList();
+            Assert.All(ids, id => Assert.Matches(re, id));
+            Assert.Equal(50, ids.Distinct().Count());
+            Assert.StartsWith("o_mywpiww0_", StraitCore.NewOpenId(1_800_000_000_000)); // (1.8e12).toString(36)
+            Assert.Equal("o_0_aaaaaaaaaaaa", StraitCore.NewOpenId(0, () => 0));
+            Assert.Equal("o_z_999999999999", StraitCore.NewOpenId(35, () => 0.9999));
         }
 
         [Fact]
