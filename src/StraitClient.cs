@@ -220,7 +220,7 @@ namespace Strait
             bool hasInitial = !string.IsNullOrEmpty(initialUrl);
             string? flag;
             try { flag = await _storage.GetItemAsync(DeferredFlag); }
-            catch { flag = null; }
+            catch { flag = "1"; } // unreadable storage = already checked: don't risk a stale deferred jump every launch
             bool firstLaunch = flag != "1";
             if (hasInitial)
             {
