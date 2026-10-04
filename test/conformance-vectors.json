@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -44,6 +44,38 @@
     {
       "logical": 392.72727272727275,
       "expected": 393
+    }
+  ],
+  "portraitScreenWidth": [
+    {
+      "width": 844,
+      "height": 390,
+      "expected": 390
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "expected": 390
+    },
+    {
+      "width": 891.4285714285714,
+      "height": 411.42857142857144,
+      "expected": 412
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "expected": 412
+    },
+    {
+      "width": 1366,
+      "height": 1024,
+      "expected": 1024
+    },
+    {
+      "width": 932,
+      "height": 430.00000001,
+      "expected": 430
     }
   ],
   "splitUrl": [

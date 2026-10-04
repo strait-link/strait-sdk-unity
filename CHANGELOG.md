@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1
+
+- Report the portrait screen width so a first launch in landscape still matches the tap
+  (shared-spec/SDK-CONTRACT.md B17): new core function `StraitCore.PortraitScreenWidth(w, h)`
+  (the shorter side, rounded like the browser; conformance vectors v5). The README's device
+  snippet uses it.
+
 ## 0.7.0
 
 - Every attributed open now supplies the tap id (shared-spec/SDK-CONTRACT.md B16): when

@@ -64,7 +64,7 @@ namespace Strait
     /// <summary>Device fields for the deferred-match fingerprint (must agree with the browser at the tap).</summary>
     public sealed class DeviceFields
     {
-        /// <summary>Use <see cref="StraitCore.BrowserScreenWidth"/>(portrait logical width) — B2.</summary>
+        /// <summary>Use <see cref="StraitCore.PortraitScreenWidth"/>(logical width, logical height) — B2, B17.</summary>
         public int ScreenWidth { get; set; }
         public double PixelRatio { get; set; }
         /// <summary>BCP-47 locale, e.g. "en-IN".</summary>

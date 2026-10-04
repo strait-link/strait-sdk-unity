@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](../).
-Version **0.7.0**. It is at parity with the React Native reference SDK
+Version **0.7.1**. It is at parity with the React Native reference SDK
 ([`shared-spec/SDK-CONTRACT.md`](../shared-spec/SDK-CONTRACT.md)).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -35,6 +35,7 @@ built-in writer and parser (`StraitJson`).
 | B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()` | ✓ |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
+| B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 
 ### What Strait records automatically (no extra code)
 
@@ -66,7 +67,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.0
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.1
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -189,12 +190,11 @@ public static class StraitDevice
         using var res = activity.Call<AndroidJavaObject>("getResources");
         using var dm = res.Call<AndroidJavaObject>("getDisplayMetrics");
         float density = dm.Get<float>("density");
-        int portraitPx = Math.Min(Display.main.systemWidth, Display.main.systemHeight);
         using var locale = new AndroidJavaClass("java.util.Locale").CallStatic<AndroidJavaObject>("getDefault");
         using var tz = new AndroidJavaClass("java.util.TimeZone").CallStatic<AndroidJavaObject>("getDefault");
         return new DeviceFields
         {
-            ScreenWidth = StraitCore.BrowserScreenWidth(portraitPx / density),
+            ScreenWidth = StraitCore.PortraitScreenWidth(Display.main.systemWidth / density, Display.main.systemHeight / density),
             PixelRatio = density,
             Language = locale.Call<string>("toLanguageTag"),
             Timezone = tz.Call<string>("getID"),
@@ -308,7 +308,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 
 ## API summary
 
-- `StraitCore`: `BrowserScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
+- `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
   `ClassifyUrl`, `NormalizeLinkHosts`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
   (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).

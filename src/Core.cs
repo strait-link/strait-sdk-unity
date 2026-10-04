@@ -82,6 +82,16 @@ namespace Strait
             return (int)Math.Ceiling(logicalWidth - 0.001);
         }
 
+        /// <summary>
+        /// The <c>screenWidth</c> device field (B17): the screen's SHORTER side, as a browser reports
+        /// it. Safari's <c>screen.width</c> at the tap is the portrait width whatever the orientation,
+        /// so a game first launched in landscape (844×390) still reports 390.
+        /// </summary>
+        public static int PortraitScreenWidth(double logicalWidth, double logicalHeight)
+        {
+            return BrowserScreenWidth(Math.Min(logicalWidth, logicalHeight));
+        }
+
         // JS: /^([a-z][a-z0-9+.-]*):\/\/([^/?#]*)([^?#]*)(?:\?([^#]*))?/i
         // Explicit A-Z instead of IgnoreCase so .NET's Unicode case folding (e.g. KELVIN SIGN ~ k)
         // can't widen the match beyond what JS's /i accepts for ASCII.

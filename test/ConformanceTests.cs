@@ -27,8 +27,8 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(4, v.GetProperty("version").GetInt32());
-            foreach (var section in new[] { "screenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
+            Assert.Equal(5, v.GetProperty("version").GetInt32());
+            foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
                          "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
@@ -96,6 +96,16 @@ namespace Strait.Tests
             {
                 double logical = c.GetProperty("logical").GetDouble();
                 Assert.True(c.GetProperty("expected").GetInt32() == StraitCore.BrowserScreenWidth(logical), $"logical={logical:R}");
+            }
+        }
+
+        [Fact]
+        public void PortraitScreenWidthVectors()
+        {
+            foreach (var c in Vectors().GetProperty("portraitScreenWidth").EnumerateArray())
+            {
+                double w = c.GetProperty("width").GetDouble(), h = c.GetProperty("height").GetDouble();
+                Assert.True(c.GetProperty("expected").GetInt32() == StraitCore.PortraitScreenWidth(w, h), $"{w:R}x{h:R}");
             }
         }
 

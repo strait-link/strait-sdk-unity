@@ -1,6 +1,6 @@
 {
   "name": "com.strait.sdk",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "displayName": "Strait SDK",
   "description": "Deep links and deferred deep links for Unity games: direct links (App Links, Universal Links, custom schemes), deferred links that survive the install, and link-open analytics. Plain C#, no third-party DLLs.",
   "unity": "2021.2",
