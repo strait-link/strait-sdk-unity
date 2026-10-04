@@ -73,6 +73,8 @@ https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.1
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
 <!-- /brand:install -->
 
+The OpenUPM listing is still pending; the git URL above works today.
+
 The package (folder `src/`) compiles into the `Strait.Sdk` assembly; everything is in
 namespace `Strait`. Package Manager → this package → *Samples* → **Quick start** imports a
 ready-made `StraitBootstrap` MonoBehaviour.
