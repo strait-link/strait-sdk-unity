@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(3, v.GetProperty("version").GetInt32());
+            Assert.Equal(4, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
