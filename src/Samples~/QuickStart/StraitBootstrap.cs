@@ -11,8 +11,8 @@ public class StraitBootstrap : MonoBehaviour
 {
     [Tooltip("Dashboard → Get started → Publishable key (st_pub_live_…). Never the secret key.")]
     public string publishableKey = "st_pub_live_…";
-    [Tooltip("Your link host, e.g. https://go.yourbrand.com")]
-    public string endpoint = "https://go.yourbrand.com";
+    [Tooltip("Your workspace link domain, e.g. https://<your-handle>.strait.link")]
+    public string endpoint = "https://<your-handle>.strait.link";
 
     public static StraitClient Client { get; private set; }
 

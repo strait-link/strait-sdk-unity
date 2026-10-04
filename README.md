@@ -1,8 +1,8 @@
 # strait-sdk-unity (C#)
 
-Deep links and deferred deep links for Unity games. Part of [Strait](../).
+Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in).
 Version **0.7.1**. It is at parity with the React Native reference SDK
-([`shared-spec/SDK-CONTRACT.md`](../shared-spec/SDK-CONTRACT.md)).
+(the Strait SDK contract).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
 `dotnet test` in CI checks it against the shared golden vectors
@@ -47,7 +47,7 @@ Every time a link opens the game, the client reports it once (contract B14):
 | Browser handed off to the game (`yourgame://…`) | `/v1/open` | the exact tap (`strait_click`, removed before `OnLink` sees the URL) |
 | First open after a Play install | `/v1/referrer` | the exact tap that sent the user to the store |
 | First open after an App Store install | `/v1/match` | the matched tap |
-| Your own https links | `/v1/open` | host + path only (never the query) |
+| Your own https links | `/v1/open` | the URL (tap id removed); the server keeps host + path only, never the query |
 
 Reports that can't be sent (offline, server busy) are saved in `Storage` (the same
 store as the deferred flag, e.g. `PlayerPrefsStore`) and retried on the next `Start`,
@@ -104,7 +104,7 @@ public class StraitLinks : MonoBehaviour
         Client = new StraitClient(new StraitConfig
         {
             PublishableKey = "st_pub_live_…",
-            Endpoint = "https://go.yourbrand.com",
+            Endpoint = "https://<your-handle>.strait.link",
             LinkHosts = { "go.yourbrand.com" },          // custom domains, if any
             Storage = new PlayerPrefsStore(),
             Platform = Application.platform == RuntimePlatform.Android ? "android"
