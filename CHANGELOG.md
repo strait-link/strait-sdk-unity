@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.2
+
+- Privacy hardening (shared-spec/SDK-CONTRACT.md B18): the URL sent with an open report
+  (`/v1/open`, `/v1/resolve`) and saved in the offline queue (`strait.pendingOpens`) keeps only
+  scheme, host, path and the first `utm_source` pair (the engine reads that for channel
+  attribution and nothing else). Query and fragment never leave the device or reach storage;
+  reports queued by an older version are stripped when the queue is next read. Your `OnLink`
+  events still carry the full URL. New core functions `StraitCore.ReportUrl` and
+  `StraitCore.StaleTap` (conformance vectors v6).
+- An expired remembered tap id (`strait.lastTap`, older than 7 days) is now deleted at `Start`
+  and when `TrackEvent` reads it, instead of only being ignored.
+- `new StraitClient(...)` throws `ArgumentException` ("StraitClient: publishableKey is required" /
+  "StraitClient: endpoint is required") when the publishable key or endpoint is empty or blank,
+  instead of failing later on every request.
+
 ## 0.7.1
 
 - Report the portrait screen width so a first launch in landscape still matches the tap

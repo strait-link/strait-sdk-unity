@@ -150,7 +150,7 @@ namespace Strait.Tests
             Assert.Matches(OpenIdPattern, e.Id);
             var open = Assert.Single(engine.Of("/v1/open"));
             AssertBody(open.Body, ("publishableKey", PK), ("openId", e.Id), ("kind", "direct"), ("route", "custom_scheme"),
-                ("appState", "background"), ("platform", "android"), ("url", "https://shop.example/p/42?color=red"),
+                ("appState", "background"), ("platform", "android"), ("url", "https://shop.example/p/42"), // B18: no query
                 ("clickId", Click), ("matched", true), ("firstLaunch", false));
         }
 
@@ -392,6 +392,118 @@ namespace Strait.Tests
             var h3 = Make(e3, new BrokenStore());
             await h3.Strait.Start("https://links.test/sale");
             Assert.Single(h3.Events);
+        }
+
+        // ---------------------------------------------- B18: no query or fragment leaves the device or reaches storage
+
+        private static string? Stored(IKeyValueStore s, string key) => s.GetItemAsync(key).Result;
+
+        [Fact]
+        public async Task B18_OpenReportKeepsOnlyHostPathAndUtmSource_AppStillGetsFullUrl()
+        {
+            var engine = new FakeEngine(("/v1/open", Accepted()));
+            var h = Make(engine, Returning());
+            await h.Strait.Start(null);
+            h.Tap("https://shop.example/p/42?email=jo%40x.com&utm_source=sms#reset-token");
+            await Settle();
+            var e = h.Events.Last();
+            Assert.Equal("https://shop.example/p/42?email=jo%40x.com&utm_source=sms#reset-token", e.Url);
+            Assert.Equal("jo@x.com", e.Params!["email"]);
+            Assert.Equal("sms", e.Params!["utm_source"]);
+            Assert.Equal("https://shop.example/p/42?utm_source=sms", engine.Of("/v1/open")[0].Body.GetProperty("url").GetString());
+        }
+
+        [Fact]
+        public async Task B18_FailedShortLinkLookupIsQueuedAndResolvedWithoutQueryOrFragment()
+        {
+            var engine = new FakeEngine(("/v1/resolve", Offline()), ("/v1/open", Offline()));
+            var h = Make(engine, Returning());
+            await h.Strait.Start(null);
+            h.Tap("https://links.test/sale?session=s3cr3t&utm_source=wa#frag");
+            await Settle();
+            Assert.Equal("https://links.test/sale?utm_source=wa", engine.Of("/v1/resolve")[0].Body.GetProperty("url").GetString());
+            var saved = Stored(h.Storage, StraitClient.QueueKey)!;
+            Assert.DoesNotContain("s3cr3t", saved);
+            Assert.Equal("https://links.test/sale?utm_source=wa", JsonDocument.Parse(saved).RootElement[0].GetProperty("url").GetString());
+        }
+
+        [Fact]
+        public async Task B18_ReportsSavedByAnOlderSdkAreStrippedBeforeSentOrSavedAgain()
+        {
+            var engine = new FakeEngine(("/v1/open", Offline()));
+            var storage = Returning();
+            await storage.SetItemAsync(StraitClient.QueueKey,
+                "[{\"openId\":\"o_old_aaaaaaaaaaaa\",\"kind\":\"direct\",\"route\":\"app_link\",\"appState\":\"closed\",\"platform\":\"android\"," +
+                "\"url\":\"https://shop.example/p?token=abc#x\",\"matched\":true,\"firstLaunch\":false,\"at\":1799999999000}]");
+            var h = Make(engine, storage);
+            await h.Strait.Start(null);
+            await h.Strait.FlushOpenReports();
+            Assert.Equal("https://shop.example/p", engine.Of("/v1/open")[0].Body.GetProperty("url").GetString());
+            Assert.DoesNotContain("token", Stored(storage, StraitClient.QueueKey)!);
+        }
+
+        [Fact]
+        public async Task B18_ExpiredRememberedTapIsDeletedAtStart()
+        {
+            var storage = Returning();
+            await storage.SetItemAsync(StraitClient.TapKey, StraitCore.RememberTap(Click, 1_800_000_000_000 - 8L * 24 * 3600 * 1000));
+            var h = Make(new FakeEngine(), storage);
+            await h.Strait.Start(null);
+            await Settle();
+            Assert.Equal("", Stored(storage, StraitClient.TapKey));
+        }
+
+        [Fact]
+        public async Task B18_TapThatExpiresWhileRunningIsDeletedByTrackEventAndNotSent()
+        {
+            var engine = new FakeEngine(("/v1/event", Accepted()));
+            var storage = Returning();
+            await storage.SetItemAsync(StraitClient.TapKey, StraitCore.RememberTap(Click, 1_800_000_000_000));
+            var h = Make(engine, storage);
+            await h.Strait.Start(null);
+            await Settle();
+            Assert.Contains(Click, Stored(storage, StraitClient.TapKey)!); // still valid at start
+            h.Advance(7L * 24 * 3600 * 1000 + 1);
+            await h.Strait.TrackEvent("purchase");
+            await Settle();
+            Assert.False(engine.Of("/v1/event")[0].Body.TryGetProperty("clickId", out _));
+            Assert.Equal("", Stored(storage, StraitClient.TapKey));
+        }
+
+        [Fact]
+        public async Task B18_ValidRememberedTapIsKeptAndSent()
+        {
+            var engine = new FakeEngine(("/v1/event", Accepted()));
+            var storage = Returning();
+            await storage.SetItemAsync(StraitClient.TapKey, StraitCore.RememberTap(Click, 1_800_000_000_000 - 1000));
+            var h = Make(engine, storage);
+            await h.Strait.Start(null);
+            await h.Strait.TrackEvent("purchase");
+            await Settle();
+            Assert.Equal(Click, engine.Of("/v1/event")[0].Body.GetProperty("clickId").GetString());
+            Assert.Contains(Click, Stored(storage, StraitClient.TapKey)!);
+        }
+
+        // ---------------------------------------------- empty key / endpoint
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void EmptyPublishableKeyIsRejected(string? key)
+        {
+            var ex = Assert.Throws<ArgumentException>(() => new StraitClient(new StraitConfig { PublishableKey = key!, Endpoint = Endpoint }));
+            Assert.StartsWith("StraitClient: publishableKey is required", ex.Message);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void EmptyEndpointIsRejected(string? endpoint)
+        {
+            var ex = Assert.Throws<ArgumentException>(() => new StraitClient(new StraitConfig { PublishableKey = PK, Endpoint = endpoint! }));
+            Assert.StartsWith("StraitClient: endpoint is required", ex.Message);
         }
     }
 }

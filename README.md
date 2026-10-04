@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in).
-Version **0.7.1**. It is at parity with the React Native reference SDK
+Version **0.7.2**. It is at parity with the React Native reference SDK
 (the Strait SDK contract).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -36,6 +36,7 @@ built-in writer and parser (`StraitJson`).
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
+| B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 
 ### What Strait records automatically (no extra code)
 
@@ -67,7 +68,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.1
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.2
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.

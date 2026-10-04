@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -1387,6 +1387,160 @@
       "reply": null,
       "fallback": "nope",
       "expected": null
+    }
+  ],
+  "reportUrl": [
+    {
+      "input": "https://links.test/sale",
+      "expected": "https://links.test/sale"
+    },
+    {
+      "input": "https://Links.Test/sale?utm_source=sms&email=jo%40x.com",
+      "expected": "https://Links.Test/sale?utm_source=sms"
+    },
+    {
+      "input": "https://shop.example/p/42?token=abc&utm_source=news%20letter&utm_source=second#frag",
+      "expected": "https://shop.example/p/42?utm_source=news%20letter"
+    },
+    {
+      "input": "https://shop.example/p/42?color=red#utm_source=frag",
+      "expected": "https://shop.example/p/42"
+    },
+    {
+      "input": "https://shop.example/p/42#section?utm_source=sms",
+      "expected": "https://shop.example/p/42"
+    },
+    {
+      "input": "https://shop.example/p/42?utm_source",
+      "expected": "https://shop.example/p/42?utm_source"
+    },
+    {
+      "input": "https://shop.example/p/42?utm_source=",
+      "expected": "https://shop.example/p/42?utm_source="
+    },
+    {
+      "input": "https://shop.example/p/42?utm_sourcex=a&xutm_source=b&utm_medium=cpc",
+      "expected": "https://shop.example/p/42"
+    },
+    {
+      "input": "https://shop.example/p/42?utm%5Fsource=sms",
+      "expected": "https://shop.example/p/42"
+    },
+    {
+      "input": "https://shop.example/p/42?a=1?utm_source=sms",
+      "expected": "https://shop.example/p/42"
+    },
+    {
+      "input": "https://shop.example/p/42?utm_source=sms?x=1",
+      "expected": "https://shop.example/p/42?utm_source=sms"
+    },
+    {
+      "input": "https://shop.example/?",
+      "expected": "https://shop.example/"
+    },
+    {
+      "input": "https://shop.example/p/42#",
+      "expected": "https://shop.example/p/42"
+    },
+    {
+      "input": "https://links.test/sale?utm_source=wa&strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": "https://links.test/sale?utm_source=wa"
+    },
+    {
+      "input": "straitlink://shop.example/p/42?session=s3cr3t&utm_source=push",
+      "expected": "straitlink://shop.example/p/42?utm_source=push"
+    },
+    {
+      "input": "myapp://open/cart?coupon=SAVE10",
+      "expected": "myapp://open/cart"
+    },
+    {
+      "input": "not a url",
+      "expected": "not a url"
+    },
+    {
+      "input": "",
+      "expected": ""
+    }
+  ],
+  "staleTap": [
+    {
+      "name": "attaches the remembered tap within the window",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "attaches at exactly 7 days",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799395200000}",
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "not after 7 days",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799395199999}",
+      "now": 1800000000000,
+      "expected": true
+    },
+    {
+      "name": "explicit clickId overrides the remembered tap",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "explicit clickId with no remembered tap",
+      "stored": null,
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "empty explicit clickId counts as none",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "no remembered tap",
+      "stored": null,
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "forgotten tap (empty value)",
+      "stored": "",
+      "now": 1800000000000,
+      "expected": false
+    },
+    {
+      "name": "unreadable value",
+      "stored": "not json",
+      "now": 1800000000000,
+      "expected": true
+    },
+    {
+      "name": "malformed tap id",
+      "stored": "{\"clickId\":\"not-a-uuid\",\"at\":1799913600000}",
+      "now": 1800000000000,
+      "expected": true
+    },
+    {
+      "name": "missing timestamp",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\"}",
+      "now": 1800000000000,
+      "expected": true
+    },
+    {
+      "name": "tap dated after now (clock moved back)",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000001}",
+      "now": 1800000000000,
+      "expected": true
+    },
+    {
+      "name": "upper-case tap id is lower-cased",
+      "stored": "{\"clickId\":\"3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F\",\"at\":1800000000000}",
+      "now": 1800000000000,
+      "expected": false
     }
   ]
 }

@@ -312,6 +312,40 @@ namespace Strait
         }
 
         /// <summary>Whether a failed report should be kept for retry: no answer (null), 429 or 5xx.</summary>
+        /// <summary>
+        /// True when the remembered tap (<paramref name="stored"/>, see <see cref="RememberTap"/>) is set but can no longer
+        /// be used: unreadable, malformed, or opened more than <see cref="AttributionWindowMs"/> before <paramref name="now"/>
+        /// (or after it). The SDK then deletes it instead of keeping it on the device (contract B18).
+        /// </summary>
+        public static bool StaleTap(string? stored, long now) =>
+            !string.IsNullOrEmpty(stored) && EventClickId(stored, now) == null;
+
+        /// <summary>
+        /// The URL an SDK reports to the engine (<c>/v1/open</c>, <c>/v1/resolve</c>) or saves in the open queue
+        /// (contract B18): the query string and fragment are removed, except the first <c>utm_source</c> pair, kept byte
+        /// for byte, because the engine reads it for channel attribution. Mirrors the engine's query reading: the query is
+        /// what sits before any '#', between the first and second '?'.
+        /// </summary>
+        public static string ReportUrl(string? url)
+        {
+            if (url == null) return "";
+            int hash = url.IndexOf('#');
+            string noFragment = hash >= 0 ? url.Substring(0, hash) : url;
+            int q = noFragment.IndexOf('?');
+            if (q < 0) return noFragment;
+            string baseUrl = noFragment.Substring(0, q);
+            string query = noFragment.Substring(q + 1);
+            int q2 = query.IndexOf('?');
+            if (q2 >= 0) query = query.Substring(0, q2);
+            foreach (var pair in query.Split('&'))
+            {
+                int eq = pair.IndexOf('=');
+                if (string.Equals(eq >= 0 ? pair.Substring(0, eq) : pair, "utm_source", StringComparison.Ordinal))
+                    return baseUrl + "?" + pair;
+            }
+            return baseUrl;
+        }
+
         public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
 
         private const string OpenIdChars = "abcdefghijklmnopqrstuvwxyz0123456789";

@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(5, v.GetProperty("version").GetInt32());
+            Assert.Equal(6, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -77,6 +77,27 @@ namespace Strait.Tests
                 };
                 var got = StraitCore.ReplyClickId(reply, StrOrNull(c.GetProperty("fallback")));
                 Assert.True(StrOrNull(c.GetProperty("expected")) == got, $"{name}: got '{got}'");
+            }
+        }
+
+        [Fact]
+        public void ReportUrlVectors()
+        {
+            foreach (var c in Vectors().GetProperty("reportUrl").EnumerateArray())
+            {
+                var input = c.GetProperty("input").GetString()!;
+                Assert.True(c.GetProperty("expected").GetString() == StraitCore.ReportUrl(input), $"reportUrl({input}): got '{StraitCore.ReportUrl(input)}'");
+            }
+        }
+
+        [Fact]
+        public void StaleTapVectors()
+        {
+            foreach (var c in Vectors().GetProperty("staleTap").EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var got = StraitCore.StaleTap(StrOrNull(c.GetProperty("stored")), c.GetProperty("now").GetInt64());
+                Assert.True(c.GetProperty("expected").GetBoolean() == got, $"{name}: got {got}");
             }
         }
 

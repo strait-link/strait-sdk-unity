@@ -171,6 +171,10 @@ namespace Strait
         public StraitClient(StraitConfig config)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            if (string.IsNullOrWhiteSpace(config.PublishableKey))
+                throw new ArgumentException("StraitClient: publishableKey is required", nameof(config));
+            if (string.IsNullOrWhiteSpace(config.Endpoint))
+                throw new ArgumentException("StraitClient: endpoint is required", nameof(config));
             _base = (config.Endpoint ?? "").TrimEnd('/');
             _linkHosts = StraitCore.NormalizeLinkHosts(_base, config.LinkHosts);
             _storage = config.Storage ?? new MemoryKeyValueStore();
@@ -222,6 +226,7 @@ namespace Strait
                 _started = true;
                 _stopped = false;
             }
+            DropStaleTap(Now()); // B18: an expired remembered tap is deleted, not kept until the next event
             bool hasInitial = !string.IsNullOrEmpty(initialUrl);
             string? flag;
             try { flag = await _storage.GetItemAsync(DeferredFlag); }
@@ -333,6 +338,7 @@ namespace Strait
                 string? stored = null;
                 try { stored = await _storage.GetItemAsync(TapKey); }
                 catch { stored = null; }
+                if (StraitCore.StaleTap(stored, Now())) DropStaleTap(Now()); // B18: delete, don't just ignore
                 var tapId = StraitCore.EventClickId(stored, Now(), clickId);
                 var fields = new List<KeyValuePair<string, object?>>
                 {
@@ -371,6 +377,30 @@ namespace Strait
             }
         }
 
+        /// <summary>
+        /// B18: delete an expired remembered tap instead of only ignoring it. The value is re-read inside the
+        /// chained write so a newer tap written meanwhile is never lost. Never throws.
+        /// </summary>
+        private void DropStaleTap(long now)
+        {
+            lock (_tapGate)
+            {
+                var prev = _tapWrite;
+                _tapWrite = Drop(prev);
+            }
+
+            async Task Drop(Task prev)
+            {
+                try { await prev; } catch { }
+                try
+                {
+                    if (StraitCore.StaleTap(await _storage.GetItemAsync(TapKey), now))
+                        await _storage.SetItemAsync(TapKey, "");
+                }
+                catch { /* best effort */ }
+            }
+        }
+
         private long Now()
         {
             try { return _now(); } catch { return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(); }
@@ -395,13 +425,15 @@ namespace Strait
                 {
                     // The lookup is also the open report (openId); the engine says whether it
                     // recorded it, and anything short of that is retried via /v1/open.
-                    var report = NewReport(id, "direct", LinkRoutes.AppLink, appState, platform, raw, null, false, firstLaunch, t0);
+                    // B18: only host + path (+ utm_source) leave the device or reach storage.
+                    var reportedUrl = StraitCore.ReportUrl(raw);
+                    var report = NewReport(id, "direct", LinkRoutes.AppLink, appState, platform, reportedUrl, null, false, firstLaunch, t0);
                     try
                     {
                         var res = await Call("POST", "/v1/resolve", new List<KeyValuePair<string, object?>>
                         {
                             Kv("publishableKey", _config.PublishableKey),
-                            Kv("url", raw),
+                            Kv("url", reportedUrl),
                             Kv("platform", platform),
                             Kv("openId", id),
                             Kv("appState", appState),
@@ -434,7 +466,7 @@ namespace Strait
                 {
                     if (c.ClickId != null) NoteTap(c.ClickId, t0);
                     // Navigation never waits for the report.
-                    _ = Report(NewReport(id, "direct", c.Route, appState, platform, c.Url, c.ClickId, true, firstLaunch, t0));
+                    _ = Report(NewReport(id, "direct", c.Route, appState, platform, StraitCore.ReportUrl(c.Url), c.ClickId, true, firstLaunch, t0));
                     ev.Route = c.Route;
                     ev.Matched = true;
                     ev.Url = c.Url;
@@ -556,7 +588,14 @@ namespace Strait
             {
                 var text = await _storage.GetItemAsync(QueueKey);
                 if (StraitJson.Parse(text ?? "[]") is List<object?> items)
-                    foreach (var item in items) if (item is Dictionary<string, object?> r) q.Add(r);
+                    foreach (var item in items)
+                        if (item is Dictionary<string, object?> r)
+                        {
+                            // B18: reports saved by an older SDK may hold a full URL; strip it here so the
+                            // next write leaves no query or fragment on the device.
+                            if (r.TryGetValue("url", out var u) && u is string us) r["url"] = StraitCore.ReportUrl(us);
+                            q.Add(r);
+                        }
             }
             catch { /* unreadable → empty */ }
             return q;
