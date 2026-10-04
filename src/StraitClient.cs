@@ -61,6 +61,22 @@ namespace Strait
         }
     }
 
+    /// <summary>
+    /// Clipboard access for the iPhone clipboard boost (contract B19). Only used when
+    /// <see cref="StraitConfig.ClipboardBoost"/> is true (or by <see cref="StraitClient.ClaimHandoff"/>).
+    /// On iOS, <see cref="IosStraitClipboard"/> implements it with UIPasteboard.
+    /// </summary>
+    public interface IStraitClipboard
+    {
+        /// <summary>
+        /// Whether the clipboard probably holds a web URL, WITHOUT reading it, so iOS shows no prompt
+        /// (UIPasteboard detectPatterns, probableWebURL; iOS 15+, false on older iOS).
+        /// </summary>
+        Task<bool> HasProbableWebUrlAsync();
+        /// <summary>The clipboard text, or null. On iOS this shows the system "Allow Paste" prompt.</summary>
+        Task<string?> ReadTextAsync();
+    }
+
     /// <summary>Device fields for the deferred-match fingerprint (must agree with the browser at the tap).</summary>
     public sealed class DeviceFields
     {
@@ -89,6 +105,15 @@ namespace Strait
         public string Platform { get; set; } = "other";
         /// <summary>Collects the device fingerprint fields. Called on demand.</summary>
         public Func<DeviceFields?>? DeviceFields { get; set; }
+        /// <summary>
+        /// iPhone clipboard boost (contract B19). Default false: the SDK never touches the clipboard. When true, the
+        /// once-per-install deferred check on iOS asks (no prompt) whether the clipboard holds a web URL and only then
+        /// reads it, which shows iOS's "Allow Paste" prompt; a Strait handoff link is claimed for an exact match,
+        /// otherwise the normal signal match runs. Turn on "Clipboard boost" in the workspace settings too.
+        /// </summary>
+        public bool ClipboardBoost { get; set; }
+        /// <summary>Clipboard access for <see cref="ClipboardBoost"/>. Default: <see cref="IosStraitClipboard"/> in iOS player builds, else none.</summary>
+        public IStraitClipboard? Clipboard { get; set; }
         /// <summary>HTTP transport. Default: <see cref="HttpClientTransport"/>.</summary>
         public IStraitTransport? Transport { get; set; }
         /// <summary>Clock in Unix ms. Default: system clock. (Tests inject a fake.)</summary>
@@ -102,7 +127,7 @@ namespace Strait
         public string Id { get; internal set; } = "";
         /// <summary>"direct" = opened by a link; "deferred" = link tapped before install.</summary>
         public string Kind { get; internal set; } = "";
-        /// <summary>app_link · custom_scheme · install_referrer · fingerprint (<see cref="LinkRoutes"/>).</summary>
+        /// <summary>app_link · custom_scheme · install_referrer · fingerprint · clipboard (<see cref="LinkRoutes"/>).</summary>
         public string Route { get; internal set; } = "";
         /// <summary>closed · background · foreground (<see cref="LinkAppStates"/>).</summary>
         public string AppState { get; internal set; } = "";
@@ -289,6 +314,43 @@ namespace Strait
         /// sends no openId, so it never adds an install.
         /// </summary>
         public Task<LinkEvent> CheckDeferred() => RunDeferred(false);
+
+        /// <summary>
+        /// Paste-button alternative of the clipboard boost (contract B19): give it the text your own paste control
+        /// received (e.g. a UIPasteControl, no prompt: the person's tap is the consent). A Strait handoff link is
+        /// claimed with POST /v1/handoff/claim for an exact match and raised as a deferred event (route "clipboard");
+        /// any other text gives matched:false, reason "not_handoff", without a network call. Never throws.
+        /// </summary>
+        public async Task<LinkEvent> ClaimHandoff(string? text)
+        {
+            long t0 = Now();
+            var id = StraitCore.NewOpenId(t0);
+            Announce(new LinkStart { Id = id, Kind = "deferred", AppState = LinkAppStates.Closed, At = t0 });
+            var ev = new LinkEvent { Id = id, Kind = "deferred", Route = LinkRoutes.Clipboard, AppState = LinkAppStates.Closed, At = t0 };
+            try
+            {
+                var token = StraitCore.ParseHandoffUrl(text, _linkHosts);
+                if (token == null)
+                {
+                    ev.Matched = false;
+                    ev.Reason = "not_handoff";
+                }
+                else
+                {
+                    var res = await Claim(token, id, t0);
+                    if (IsTrue(res.Json, "matched")) ApplyClaim(ev, res, t0);
+                    else { ev.Matched = false; ev.Reason = Str(res.Json, "reason") ?? "handoff_unknown"; }
+                }
+            }
+            catch
+            {
+                ev.Matched = false;
+                ev.Reason = "network";
+                ev.Url = null; ev.Path = null; ev.Params = null; ev.LinkId = null;
+            }
+            ev.Ms = Now() - t0;
+            return Emit(ev);
+        }
 
         /// <summary>Open reports saved while offline, waiting to be sent (debugging).</summary>
         public Task<int> PendingOpenReports() => Serial(async () => (await ReadQueue()).Count);
@@ -525,6 +587,20 @@ namespace Strait
                         }
                     }
                 }
+                // B19: iPhone clipboard boost, once per install only, and only when the app opted in.
+                if (!done && record && _config.Platform == "ios" && _config.ClipboardBoost)
+                {
+                    var token = await HandoffTokenFromClipboard();
+                    if (token != null)
+                    {
+                        var res = await Claim(token, id, t0);
+                        if (IsTrue(res.Json, "matched"))
+                        {
+                            ApplyClaim(ev, res, t0);
+                            done = true;
+                        }
+                    }
+                }
                 if (!done)
                 {
                     var fields = new List<KeyValuePair<string, object?>>
@@ -552,6 +628,43 @@ namespace Strait
             }
             ev.Ms = Now() - t0;
             return Emit(ev);
+        }
+
+        /// <summary>
+        /// B19: detect (no prompt) whether the clipboard holds a web URL; only then read it (iOS shows the paste
+        /// prompt) and keep a Strait handoff token. Null otherwise; clipboard failures never throw.
+        /// </summary>
+        private async Task<string?> HandoffTokenFromClipboard()
+        {
+            var clipboard = _config.Clipboard ?? IosStraitClipboard.Default;
+            if (clipboard == null) return null;
+            try
+            {
+                if (!await clipboard.HasProbableWebUrlAsync()) return null;
+                return StraitCore.ParseHandoffUrl(await clipboard.ReadTextAsync(), _linkHosts);
+            }
+            catch { return null; }
+        }
+
+        /// <summary>POST /v1/handoff/claim. No answer, 429 or 5xx throws (= network).</summary>
+        private Task<Response> Claim(string token, string openId, long at) =>
+            Answered("/v1/handoff/claim", new List<KeyValuePair<string, object?>>
+            {
+                Kv("publishableKey", _config.PublishableKey),
+                Kv("token", token),
+                Kv("platform", "ios"),
+                Kv("openId", openId),
+                Kv("at", at),
+            });
+
+        private void ApplyClaim(LinkEvent ev, Response res, long t0)
+        {
+            ev.Route = LinkRoutes.Clipboard;
+            ev.Matched = true;
+            ev.Reason = null;
+            SetDestination(ev, Str(res.Json, "longUrl"));
+            ev.LinkId = Str(res.Json, "linkId");
+            NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0);
         }
 
         /// <summary>Like <see cref="Call"/>, but no answer, 429 or 5xx throws (= try again next launch).</summary>

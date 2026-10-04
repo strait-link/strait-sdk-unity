@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in).
-Version **0.7.2**. It is at parity with the React Native reference SDK
+Version **0.8.0**. It is at parity with the React Native reference SDK
 (the Strait SDK contract).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -37,6 +37,7 @@ built-in writer and parser (`StraitJson`).
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
+| B19 | iPhone clipboard boost, opt-in (`ClipboardBoost`, default false): detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`, else the normal `/v1/match`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
 
 ### What Strait records automatically (no extra code)
 
@@ -47,7 +48,7 @@ Every time a link opens the game, the client reports it once (contract B14):
 | Verified link tapped in WhatsApp, Gmail, Messages… | `/v1/resolve` (the lookup is the report) | the link; also counted as a tap |
 | Browser handed off to the game (`yourgame://…`) | `/v1/open` | the exact tap (`strait_click`, removed before `OnLink` sees the URL) |
 | First open after a Play install | `/v1/referrer` | the exact tap that sent the user to the store |
-| First open after an App Store install | `/v1/match` | the matched tap |
+| First open after an App Store install | `/v1/match` (or `/v1/handoff/claim` with the clipboard boost) | the matched tap |
 | Your own https links | `/v1/open` | the URL (tap id removed); the server keeps host + path only, never the query |
 
 Reports that can't be sent (offline, server busy) are saved in `Storage` (the same
@@ -68,7 +69,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.2
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.0
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -237,6 +238,52 @@ extern "C" {
 }
 ```
 
+### iPhone install matching and the clipboard boost (B19)
+
+On iPhone there is no install referrer. By default Strait matches the first open to the
+tap with a few short-lived signals (IP kept only as a keyed hash, screen, language, time
+zone, iOS version), kept for one hour and used only to open the right screen in your
+game. It is routing, not tracking: no advertising, no sharing, no linking across apps.
+How it works, and a ready-made App Store privacy label section:
+https://straitlink.in/docs/iphone-install-matching/
+
+The workspace owner can turn signal matching off in the Dashboard (Settings → **iPhone
+install matching**). Then the tap page stores no device signals and iPhone installs are
+not matched by signals (Android's Play Install Referrer is unaffected).
+
+**Clipboard boost (optional, off by default).** For an exact match, turn on **Clipboard
+boost** in the workspace settings (the tap page's "Get the app" button then copies a
+short-lived, single-use Strait link) and opt in in the game:
+
+```csharp
+var strait = new StraitClient(new StraitConfig
+{
+    // …as above…
+    ClipboardBoost = true,   // default false: the SDK never touches the clipboard
+});
+```
+
+On the first launch after install (iOS only, once), the SDK asks iOS whether the clipboard
+probably holds a web link (`UIPasteboard detectPatterns`, iOS 15+). That check reads
+nothing and **shows no prompt**. Only if a link is likely does it read the clipboard,
+and **iOS then shows its "Allow Paste" prompt** to the player. A Strait handoff link is
+claimed with `POST /v1/handoff/claim` for an exact match (`LinkEvent.Route` =
+`"clipboard"`); anything else is ignored on the device and the normal signal match runs.
+`CheckDeferred()` (debug) never reads the clipboard.
+
+The iOS clipboard comes from `IosStraitClipboard` (default in iOS player builds), backed
+by `src/Plugins/iOS/StraitClipboard.mm`. You can pass your own `IStraitClipboard` as
+`Clipboard`. **Paste-button alternative (no prompt):** show your own iOS paste control
+(e.g. a native `UIPasteControl`, iOS 16+) and give the text it receives to
+`await strait.ClaimHandoff(text)`; the player's tap on the system paste button is the
+consent, and the result arrives as a normal `OnLink` event.
+
+> ⚠️ `StraitClipboard.mm` and the `[DllImport("__Internal")]` wrapper have **not** been
+> compiled or run: this repository's CI is .NET only and nobody has built it in Xcode or
+> tried it on an iPhone yet. The C# logic around it (when to detect, read, claim or fall
+> back) is unit-tested in CI with a clipboard spy, including that the clipboard is never
+> touched by default.
+
 ### Android Play Install Referrer
 
 Add `com.android.installreferrer:installreferrer:2.2` to your Gradle dependencies, either
@@ -312,13 +359,13 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 ## API summary
 
 - `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
-  `ClassifyUrl`, `NormalizeLinkHosts`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
+  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
   (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId, clickId)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId, clickId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the same fields and wire values as the React Native SDK.
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is

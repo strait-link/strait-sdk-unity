@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(6, v.GetProperty("version").GetInt32());
+            Assert.Equal(7, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -88,6 +88,21 @@ namespace Strait.Tests
                 var input = c.GetProperty("input").GetString()!;
                 Assert.True(c.GetProperty("expected").GetString() == StraitCore.ReportUrl(input), $"reportUrl({input}): got '{StraitCore.ReportUrl(input)}'");
             }
+        }
+
+        [Fact]
+        public void ParseHandoffUrlVectors()
+        {
+            var n = 0;
+            foreach (var c in Vectors().GetProperty("parseHandoffUrl").EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var hosts = c.GetProperty("linkHosts").EnumerateArray().Select(h => h.GetString()!).ToList();
+                var got = StraitCore.ParseHandoffUrl(StrOrNull(c.GetProperty("text")), hosts);
+                Assert.True(StrOrNull(c.GetProperty("expected")) == got, $"parseHandoffUrl {name}: got '{got}'");
+                n++;
+            }
+            Assert.True(n >= 30);
         }
 
         [Fact]

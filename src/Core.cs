@@ -15,6 +15,8 @@ namespace Strait
         public const string CustomScheme = "custom_scheme";
         public const string InstallReferrer = "install_referrer";
         public const string Fingerprint = "fingerprint";
+        /// <summary>iPhone clipboard boost: a Strait handoff link claimed exactly (contract B19).</summary>
+        public const string Clipboard = "clipboard";
     }
 
     /// <summary>What the app was doing when a link arrived.</summary>
@@ -319,6 +321,35 @@ namespace Strait
         /// </summary>
         public static bool StaleTap(string? stored, long now) =>
             !string.IsNullOrEmpty(stored) && EventClickId(stored, now) == null;
+
+        private static readonly Regex HandoffUrlRe = new Regex(
+            @"^([A-Za-z][A-Za-z0-9+.\-]*)://([^/?#\s]+)/h/([^/?#\s]*)/?(?:[?#]\S*)?\z", RegexOptions.CultureInvariant);
+        private static readonly Regex HandoffTokenRe = new Regex(@"^[A-Za-z0-9_\-]{22}\z", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// The handoff token inside text read from the clipboard (contract B19), or null. Only a Strait handoff link
+        /// counts: <c>https://&lt;link host&gt;/h/&lt;token&gt;</c>, where the host is one of this app's link hosts
+        /// (<see cref="NormalizeLinkHosts"/>), the path is exactly <c>/h/</c> + 22 base64url characters (one trailing
+        /// slash allowed) and the whole trimmed text is that one URL; a query or fragment after it is ignored. Scheme and
+        /// host compare case-insensitively; the path and token are case-sensitive. Anything else gives null, and the SDK
+        /// then sends nothing about the clipboard.
+        /// </summary>
+        public static string? ParseHandoffUrl(string? text, IEnumerable<string> linkHosts)
+        {
+            if (text == null) return null;
+            var s = text.Trim();
+            if (s.Length == 0 || s.Length > 2048) return null;
+            var m = HandoffUrlRe.Match(s);
+            if (!m.Success || m.Groups[1].Value.ToLowerInvariant() != "https") return null;
+            var host = m.Groups[2].Value.ToLowerInvariant();
+            bool known = false;
+            if (linkHosts != null)
+                foreach (var h in linkHosts)
+                    if (h != null && h.ToLowerInvariant() == host) { known = true; break; }
+            if (!known) return null;
+            var token = m.Groups[3].Value;
+            return HandoffTokenRe.IsMatch(token) ? token : null;
+        }
 
         /// <summary>
         /// The URL an SDK reports to the engine (<c>/v1/open</c>, <c>/v1/resolve</c>) or saves in the open queue

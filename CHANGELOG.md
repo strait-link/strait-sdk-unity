@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.0
+
+- iPhone clipboard boost, opt-in (shared-spec/SDK-CONTRACT.md B19). New `StraitConfig.ClipboardBoost`
+  (default **false**: the SDK never touches the clipboard) and `StraitConfig.Clipboard`
+  (`IStraitClipboard`). With it on, the once-per-install deferred check on iOS asks, without a prompt,
+  whether the clipboard probably holds a web URL (`UIPasteboard detectPatterns`), reads it only then
+  (iOS shows its "Allow Paste" prompt), and claims a Strait handoff link with
+  `POST /v1/handoff/claim` for an exact match (`LinkEvent.Route` `"clipboard"`); otherwise the
+  normal `/v1/match` runs with the same open id. `CheckDeferred()` never reads the clipboard.
+- New `StraitClient.ClaimHandoff(text)` for a paste button (no prompt), new core function
+  `StraitCore.ParseHandoffUrl` (conformance vectors v7), new route `LinkRoutes.Clipboard`.
+- New `IosStraitClipboard` + native `Plugins/iOS/StraitClipboard.mm` (iOS player builds only; not
+  compiled in CI, not yet tried on a device).
+
 ## 0.7.2
 
 - Privacy hardening (shared-spec/SDK-CONTRACT.md B18): the URL sent with an open report
