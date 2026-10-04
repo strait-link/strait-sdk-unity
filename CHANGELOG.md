@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- Every attributed open now supplies the tap id (shared-spec/SDK-CONTRACT.md B16): when
+  `/v1/resolve` (verified short link), `/v1/match` (fingerprint) or `/v1/referrer` (Play
+  install) returns `clickId`, it is remembered as `strait.lastTap` and sent with conversion
+  events. A reply without one (older engine) keeps the 0.6.0 behaviour.
+- New core function: `StraitCore.ReplyClickId` (conformance vectors v4).
+
 ## 0.6.0
 
 - Conversion events carry the tap id (shared-spec/SDK-CONTRACT.md B15): the tap id of the last

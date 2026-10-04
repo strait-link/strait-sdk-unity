@@ -62,6 +62,25 @@ namespace Strait.Tests
         }
 
         [Fact]
+        public void ReplyClickIdVectors()
+        {
+            foreach (var c in Vectors().GetProperty("replyClickId").EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var r = c.GetProperty("reply");
+                object? reply = r.ValueKind switch
+                {
+                    JsonValueKind.Null => null,
+                    JsonValueKind.String => r.GetString(),
+                    JsonValueKind.Number => r.GetDouble(),
+                    _ => r.ToString(),
+                };
+                var got = StraitCore.ReplyClickId(reply, StrOrNull(c.GetProperty("fallback")));
+                Assert.True(StrOrNull(c.GetProperty("expected")) == got, $"{name}: got '{got}'");
+            }
+        }
+
+        [Fact]
         public void RememberTap_RoundTrips()
         {
             Assert.Equal("{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000}",

@@ -1,7 +1,7 @@
 # strait-sdk-unity (C#)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](../).
-Version **0.6.0**. It is at parity with the React Native reference SDK
+Version **0.7.0**. It is at parity with the React Native reference SDK
 ([`shared-spec/SDK-CONTRACT.md`](../shared-spec/SDK-CONTRACT.md)).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -34,6 +34,7 @@ built-in writer and parser (`StraitJson`).
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
 | B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()` | ✓ |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
+| B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 
 ### What Strait records automatically (no extra code)
 
@@ -65,7 +66,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.6.0
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.7.0
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -149,10 +150,11 @@ var mine = await StraitLinks.Client.ReportFingerprint();    // Dictionary<string
 var cmp  = await StraitLinks.Client.CompareFingerprint();   // the engine's app-vs-browser comparison
 ```
 
-`TrackEvent` carries the tap id of the last link open that had one (a browser hand-off or a
-Play install) for 7 days, so the dashboard can place the revenue on that tap's channel and
-A/B variant (contract B15). A newer open by a verified short link replaces it (its tap id
-isn't known to the app, so the event then carries none). Pass `clickId:` to set it yourself.
+`TrackEvent` carries the tap id of the last attributed link open for 7 days, so the dashboard
+can place the revenue on that tap's channel and A/B variant (contracts B15/B16). Every
+attributed open supplies one: a browser hand-off, a Play install, or the engine's reply to a
+verified short link or a deferred match. A newer open replaces the older tap. Pass `clickId:`
+to set it yourself.
 
 ### PlayerPrefs storage
 

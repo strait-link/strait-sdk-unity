@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -1293,6 +1293,68 @@
       "now": 1800000000000,
       "explicit": null,
       "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    }
+  ],
+  "replyClickId": [
+    {
+      "name": "the reply's tap id",
+      "reply": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "fallback": null,
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "upper-case reply tap id is lower-cased",
+      "reply": "3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F",
+      "fallback": null,
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "the reply wins over the known tap id",
+      "reply": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "fallback": "11111111-2222-4333-8444-555555555555",
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "no reply tap id (older engine): keep the known tap id",
+      "reply": null,
+      "fallback": "11111111-2222-4333-8444-555555555555",
+      "expected": "11111111-2222-4333-8444-555555555555"
+    },
+    {
+      "name": "no reply tap id and none known: forget",
+      "reply": null,
+      "fallback": null,
+      "expected": null
+    },
+    {
+      "name": "malformed reply tap id: forget",
+      "reply": "not-a-uuid",
+      "fallback": null,
+      "expected": null
+    },
+    {
+      "name": "malformed reply tap id falls back to the known one",
+      "reply": "not-a-uuid",
+      "fallback": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+    },
+    {
+      "name": "empty reply tap id: forget",
+      "reply": "",
+      "fallback": null,
+      "expected": null
+    },
+    {
+      "name": "non-string reply tap id: forget",
+      "reply": 42,
+      "fallback": null,
+      "expected": null
+    },
+    {
+      "name": "malformed known tap id: forget",
+      "reply": null,
+      "fallback": "nope",
+      "expected": null
     }
   ]
 }

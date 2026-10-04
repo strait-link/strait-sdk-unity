@@ -412,7 +412,7 @@ namespace Strait
                         ev.Matched = matched;
                         ev.Reason = matched ? null : (Str(res.Json, "reason") ?? Str(res.Json, "error"));
                         if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
-                        if (matched) NoteTap(null, t0);
+                        if (matched) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0);
                         ev.LinkId = Str(res.Json, "linkId");
                         if (!IsTrue(res.Json, "recorded"))
                         {
@@ -488,7 +488,7 @@ namespace Strait
                             ev.Matched = true;
                             SetDestination(ev, Str(res.Json, "longUrl"));
                             ev.LinkId = Str(res.Json, "linkId") ?? linkId;
-                            if (record) NoteTap(referrerClick, t0);
+                            if (record) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId"), referrerClick), t0);
                             done = true;
                         }
                     }
@@ -507,7 +507,7 @@ namespace Strait
                     ev.Matched = matched;
                     ev.Reason = matched ? null : "no_match";
                     if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
-                    if (record && matched) NoteTap(null, t0);
+                    if (record && matched) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0);
                     ev.LinkId = Str(res.Json, "linkId");
                 }
             }
@@ -708,6 +708,9 @@ namespace Strait
 
         private static bool IsTrue(Dictionary<string, object?> j, string key) =>
             j.TryGetValue(key, out var v) && v is bool b && b;
+
+        private static object? Get(Dictionary<string, object?> j, string key) =>
+            j.TryGetValue(key, out var v) ? v : null;
 
         private static string? Str(Dictionary<string, object?> j, string key) =>
             j.TryGetValue(key, out var v) && v is string s ? s : null;

@@ -608,10 +608,59 @@ namespace Strait.Tests
         }
 
         [Fact]
-        public async Task B15_NewerShortLinkOpen_ForgetsOlderTap()
+        public async Task B15_NewerShortLinkOpen_NoReplyTapId_ForgetsOlderTap()
         {
             var engine = new FakeEngine(EventRoutes(("/v1/resolve",
                 "{\"matched\":true,\"longUrl\":\"https://shop.example/p/42\",\"linkId\":\"lnk_42\"}")));
+            var h = Make(engine);
+            await h.Strait.Start(HandOff);
+            await h.Strait.HandleUrl("https://links.test/sale");
+            await h.Strait.TrackEvent("purchase");
+            Assert.False(LastEvent(engine).TryGetProperty("clickId", out _));
+        }
+
+        [Fact]
+        public async Task B16_ShortLinkOpen_RemembersReplyTapId()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/resolve",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/42\",\"linkId\":\"lnk_42\",\"recorded\":true,\"clickId\":\"" + Tap.ToUpperInvariant() + "\"}")));
+            var h = Make(engine);
+            await h.Strait.Start("straitlink://shop.example/p/42?strait_click=" + OtherTap);
+            h.Clock.T += 1000;
+            await h.Strait.HandleUrl("https://links.test/sale");
+            await h.Strait.TrackEvent("purchase");
+            Assert.Equal(Tap, LastEvent(engine).GetProperty("clickId").GetString());
+            var stored = JsonDocument.Parse((await h.Storage.GetItemAsync(StraitClient.TapKey))!).RootElement;
+            Assert.Equal(1_001_000, stored.GetProperty("at").GetInt64());
+        }
+
+        [Fact]
+        public async Task B16_FingerprintMatch_RemembersReplyTapId()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/match",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/9\",\"linkId\":\"lnk_9\",\"clickId\":\"" + Tap + "\"}")));
+            var h = Make(engine);
+            await h.Strait.Start(null);
+            await h.Strait.TrackEvent("purchase");
+            Assert.Equal(Tap, LastEvent(engine).GetProperty("clickId").GetString());
+        }
+
+        [Fact]
+        public async Task B16_ReferrerReplyTapId_WinsOverParsed()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/referrer",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/7\",\"linkId\":\"lnk_7\",\"clickId\":\"" + Tap + "\"}")));
+            var h = Make(engine, referrer: "strait_link=lnk_7&strait_click=" + OtherTap);
+            await h.Strait.Start(null);
+            await h.Strait.TrackEvent("purchase");
+            Assert.Equal(Tap, LastEvent(engine).GetProperty("clickId").GetString());
+        }
+
+        [Fact]
+        public async Task B16_MalformedReplyTapId_Forgets()
+        {
+            var engine = new FakeEngine(EventRoutes(("/v1/resolve",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/42\",\"linkId\":\"lnk_42\",\"clickId\":\"nope\"}")));
             var h = Make(engine);
             await h.Strait.Start(HandOff);
             await h.Strait.HandleUrl("https://links.test/sale");

@@ -288,6 +288,19 @@ namespace Strait
             return age >= 0 && age <= AttributionWindowMs ? clickId.ToLowerInvariant() : null;
         }
 
+        /// <summary>
+        /// The tap id to remember after an attributed open the engine answered (contract B16): the reply's
+        /// <c>clickId</c> when it is a valid tap id (lower-cased); else <paramref name="fallback"/> when valid (a tap
+        /// id the SDK already knew, e.g. the Play referrer's — so an older engine that returns none keeps B15); else
+        /// null, which forgets the remembered tap (the newer touch wins).
+        /// </summary>
+        public static string? ReplyClickId(object? reply, string? fallback = null)
+        {
+            if (reply is string r && ClickIdRe.IsMatch(r)) return r.ToLowerInvariant();
+            if (fallback != null && ClickIdRe.IsMatch(fallback)) return fallback.ToLowerInvariant();
+            return null;
+        }
+
         /// <summary>Whether a failed report should be kept for retry: no answer (null), 429 or 5xx.</summary>
         public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
 
