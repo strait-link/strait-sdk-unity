@@ -28,5 +28,5 @@ This SDK only needs your workspace's **publishable** key (`st_pub_live_…` /
 `st_pub_test_…`), which is safe to ship in apps and web pages. Never put a
 secret key (`st_live_…` / `st_test_…`) in client code. The server SDK
 (`strait-sdk-node`) is the only one that takes a secret key, and it belongs on
-your backend only. If a secret key leaks, rotate it in the dashboard
-(Settings → API keys) right away.
+your backend only. If a secret key leaks, replace it right away in the dashboard
+(Settings → Secret keys: create a new key, then revoke the leaked one).
