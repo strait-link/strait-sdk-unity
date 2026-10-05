@@ -2,7 +2,7 @@
   "$comment": "The ONLY place this package's public identity is typed. Change it with shared-spec/scripts/rename-brand.sh (all SDKs at once) or edit + run: node scripts/brand.mjs --write. Set final:true only once the brand is chosen — the release workflow refuses to publish before that.",
   "brand": "Strait",
   "slug": "strait",
-  "npmScope": "@strait",
+  "npmScope": "@straitlink",
   "githubOwner": "bazingga08",
   "repoPrefix": "strait",
   "website": "https://straitlink.in",

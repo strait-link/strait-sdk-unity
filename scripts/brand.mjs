@@ -34,10 +34,14 @@ export function identity(b) {
   need('legalName', /^\S.{0,99}$/, 'the copyright holder');
   const kind = need('kind', new RegExp(`^(${KINDS.join('|')})$`), KINDS.join(' | '));
   const pkg = need('package', /^[a-z0-9][a-z0-9-]{0,40}$/, 'the package suffix, e.g. "sdk-web"');
+  // Optional: the npm name suffix when it differs from the repo suffix
+  // (e.g. package "sdk-react-native" published as "@straitlink/react-native").
+  if (b.npmPackage !== undefined) need('npmPackage', /^[a-z0-9][a-z0-9-]{0,40}$/, 'the npm name suffix, e.g. "react-native"');
+  const npmPkg = b.npmPackage ?? pkg;
   const repo = `${prefix}-${pkg}`;
   const repoUrl = `https://github.com/${owner}/${repo}`;
   const name = {
-    npm: `${scope}/${pkg}`,
+    npm: `${scope}/${npmPkg}`,
     dart: `${slug}_sdk`,
     gradle: `com.github.${owner}:${repo}`,
     swift: repo,
@@ -223,7 +227,7 @@ export function plan(root) {
     })));
   }
   if ((id.kind === 'npm' || id.kind === 'unity') && old !== id.name) {
-    replaceIn('README.md', new RegExp(esc(old), 'g'), id.name);
+    for (const f of ['README.md', 'AGENTS.md']) replaceIn(f, new RegExp(esc(old), 'g'), id.name);
   }
 
   // 2. README install block.
