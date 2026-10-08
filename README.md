@@ -1,4 +1,9 @@
-# strait-sdk-unity (C#)
+# Strait SDK for Unity
+
+`strait-sdk-unity` (C#)
+
+> **Availability:** Android: Live · iPhone install matching: **Beta** (not yet proven on a real iPhone) · SDK: Beta (the Unity glue has not been run in the Unity editor yet).
+> [Platform status](https://straitlink.in/platform-status/) · [Docs](https://straitlink.in/docs/)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in).
 Version **0.8.0**. It is at parity with the React Native reference SDK
