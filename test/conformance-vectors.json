@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -415,6 +415,192 @@
       "expected": {
         "route": "app_link",
         "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://acme.page.link/aBcD",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://acme.page.link/aBcD?link=https%3A%2F%2Fshop.example%2Fp%2F1",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?link=https%3A%2F%2Fshop.example%2Fp%2F42%3Fcolor%3Dred&apn=com.acme.app&ibi=com.acme.App",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42?color=red",
+        "path": "/p/42",
+        "params": {
+          "color": "red"
+        },
+        "clickId": null
+      }
+    },
+    {
+      "raw": "https://ACME.Page.Link/?link=https://shop.example/p/42&apn=com.acme.app",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42",
+        "path": "/p/42",
+        "params": {},
+        "clickId": null
+      }
+    },
+    {
+      "raw": "https://acme.page.link?link=https%3A%2F%2Fshop.example%2Fp%2F42",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42",
+        "path": "/p/42",
+        "params": {},
+        "clickId": null
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?link=https%3A%2F%2Fshop.example%2Fp%2F42%3Futm_source%3Dsms%26strait_click%3D3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f&efr=1",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://shop.example/p/42?utm_source=sms",
+        "path": "/p/42",
+        "params": {
+          "utm_source": "sms"
+        },
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?link=http%3A%2F%2Fshop.example%2Fold",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "http://shop.example/old",
+        "path": "/old",
+        "params": {},
+        "clickId": null
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?link=javascript%3Aalert(1)",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?link=myapp%3A%2F%2Fopen%2Fcart",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?link=",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://acme.page.link/?apn=com.acme.app",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://go.brand.com/?link=https%3A%2F%2Fshop.example%2Fp%2F42",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": true
+      }
+    },
+    {
+      "raw": "https://other.page.link/?link=https%3A%2F%2Fshop.example%2Fp%2F42",
+      "linkHosts": [
+        "links.test",
+        "acme.page.link",
+        "go.brand.com"
+      ],
+      "expected": {
+        "route": "app_link",
+        "needsResolve": false,
+        "url": "https://other.page.link/?link=https%3A%2F%2Fshop.example%2Fp%2F42",
+        "path": "/",
+        "params": {
+          "link": "https://shop.example/p/42"
+        },
+        "clickId": null
       }
     }
   ],

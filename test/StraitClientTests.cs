@@ -300,6 +300,38 @@ namespace Strait.Tests
             Assert.Equal(2, h.Engine.Calls.Count(c => c.Path == "/v1/resolve"));
         }
 
+        // ------------------------------------------------------------ old Firebase page.link links (B22)
+
+        [Fact]
+        public async Task PageLinkShortLink_IsResolvedByTheEngine_WithItsHost()
+        {
+            var h = Make(new FakeEngine(Routes(("/v1/resolve",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/7\",\"linkId\":\"lnk_7\",\"slug\":\"aBcD\",\"recorded\":true}"))),
+                linkHosts: new List<string> { "acme.page.link" });
+            await h.Strait.Start("https://acme.page.link/aBcD");
+            var call = h.Engine.Calls.Single(c => c.Path == "/v1/resolve");
+            Assert.Equal("https://acme.page.link/aBcD", S(call.Body, "url"));
+            var e = h.Events[0];
+            Assert.Equal("app_link", e.Route);
+            Assert.True(e.Matched);
+            Assert.Equal("https://shop.example/p/7", e.Url);
+            Assert.Equal("lnk_7", e.LinkId);
+        }
+
+        [Fact]
+        public async Task PageLinkLongLink_OpensItsLinkDestination_NoResolve()
+        {
+            var h = Make(new FakeEngine(Routes(("/v1/open", "{\"ok\":true}"))), linkHosts: new List<string> { "acme.page.link" });
+            await h.Strait.Start("https://acme.page.link/?link=https%3A%2F%2Fshop.example%2Fp%2F42%3Fcolor%3Dred&apn=com.acme.app");
+            var e = h.Events[0];
+            Assert.Equal("app_link", e.Route);
+            Assert.True(e.Matched);
+            Assert.Equal("https://shop.example/p/42?color=red", e.Url);
+            Assert.Equal("/p/42", e.Path);
+            Assert.Equal("red", e.Params!["color"]);
+            Assert.DoesNotContain(h.Engine.Calls, c => c.Path == "/v1/resolve");
+        }
+
         [Fact]
         public async Task EndpointTrailingSlashes_AreStripped()
         {

@@ -6,7 +6,7 @@
 > [Platform status](https://straitlink.in/platform-status/) · [Docs](https://straitlink.in/docs/)
 
 Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in).
-Version **0.8.0**. It is at parity with the React Native reference SDK
+Version **0.8.1**. It is at parity with the React Native reference SDK
 (the Strait SDK contract).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -43,6 +43,7 @@ built-in writer and parser (`StraitJson`).
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 | B19 | iPhone clipboard boost, opt-in (`ClipboardBoost`, default false): detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`, else the normal `/v1/match`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
+| B22 | Old Firebase page.link links: on a `*.page.link` link host, a short link → `/v1/resolve` (the engine matches the imported old host + code); a long link (`/?link=<http(s) URL>`) → its `link=` value is the destination, read on the device with no lookup (`StraitCore.PageLinkLongLink`) | ✓ (unit tests only, not on a device) |
 
 ### What Strait records automatically (no extra code)
 
@@ -242,6 +243,21 @@ extern "C" {
   char *_StraitTimezone() { return StraitDup(NSTimeZone.localTimeZone.name); }
 }
 ```
+
+### Old Firebase page.link links (B22)
+
+Moving off Firebase Dynamic Links? People who already have your game can keep opening it from old
+`<x>.page.link` links, as long as Google keeps serving page.link's app-link files (it still does today;
+nobody but Google controls page.link):
+
+1. Keep `applinks:<x>.page.link` (iOS) and the page.link intent filter (Android) in your next build.
+2. Add the host: `LinkHosts = { "<x>.page.link" }`.
+3. Import your old links in the dashboard (Import → Firebase); each keeps its old host and code.
+
+A page.link short link (`https://<x>.page.link/aBcD`) is then looked up like any Strait short link; a long link
+(`https://<x>.page.link/?link=https://…`) opens its `link=` destination on the device, with no network call.
+People without your game still land on whatever Google serves. Tested in unit tests only, not yet on a real
+iPhone.
 
 ### iPhone install matching and the clipboard boost (B19)
 
