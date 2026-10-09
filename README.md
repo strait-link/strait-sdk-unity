@@ -75,7 +75,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.0
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.1
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
