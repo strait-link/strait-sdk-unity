@@ -404,11 +404,11 @@ namespace Strait.Tests
             var engine = new FakeEngine(("/v1/open", Accepted()));
             var h = Make(engine, Returning());
             await h.Strait.Start(null);
-            h.Tap("https://shop.example/p/42?email=jo%40x.com&utm_source=sms#reset-token");
+            h.Tap("https://shop.example/p/42?email=jo%40hilltop.example&utm_source=sms#reset-token");
             await Settle();
             var e = h.Events.Last();
-            Assert.Equal("https://shop.example/p/42?email=jo%40x.com&utm_source=sms#reset-token", e.Url);
-            Assert.Equal("jo@x.com", e.Params!["email"]);
+            Assert.Equal("https://shop.example/p/42?email=jo%40hilltop.example&utm_source=sms#reset-token", e.Url);
+            Assert.Equal("jo@hilltop.example", e.Params!["email"]);
             Assert.Equal("sms", e.Params!["utm_source"]);
             Assert.Equal("https://shop.example/p/42?utm_source=sms", engine.Of("/v1/open")[0].Body.GetProperty("url").GetString());
         }

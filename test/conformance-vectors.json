@@ -271,7 +271,7 @@
       "raw": "https://links.test/sale",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "app_link",
@@ -282,7 +282,7 @@
       "raw": "https://LINKS.test/sale?utm_source=sms",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "app_link",
@@ -290,10 +290,10 @@
       }
     },
     {
-      "raw": "https://go.brand.com/promo",
+      "raw": "https://go.hilltop.example/promo",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "app_link",
@@ -304,7 +304,7 @@
       "raw": "https://shop.example/p/42?color=red",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "app_link",
@@ -321,7 +321,7 @@
       "raw": "straitlink://shop.example/p/42?color=red",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "custom_scheme",
@@ -338,7 +338,7 @@
       "raw": "myapp://open/cart",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "custom_scheme",
@@ -353,7 +353,7 @@
       "raw": "not a url",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": null
     },
@@ -361,7 +361,7 @@
       "raw": "straitlink://shop.example/p/42?color=red&strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "custom_scheme",
@@ -378,7 +378,7 @@
       "raw": "straitlink://shop.example/p/42?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "custom_scheme",
@@ -393,7 +393,7 @@
       "raw": "https://shop.example/p/42?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f&utm_source=sms",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "app_link",
@@ -410,7 +410,7 @@
       "raw": "https://links.test/sale?strait_click=3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
       "linkHosts": [
         "links.test",
-        "go.brand.com"
+        "go.hilltop.example"
       ],
       "expected": {
         "route": "app_link",
@@ -429,17 +429,17 @@
     {
       "endpoint": "https://links.test/",
       "linkHosts": [
-        "go.brand.com",
-        "https://Go2.Brand.com/",
-        "GO.brand.com",
+        "go.hilltop.example",
+        "https://Go2.Hilltop.example/",
+        "GO.hilltop.example",
         "  ",
         "bad host/x",
         "localhost:3000"
       ],
       "expected": [
         "links.test",
-        "go.brand.com",
-        "go2.brand.com",
+        "go.hilltop.example",
+        "go2.hilltop.example",
         "localhost:3000"
       ]
     },
@@ -1395,7 +1395,7 @@
       "expected": "https://links.test/sale"
     },
     {
-      "input": "https://Links.Test/sale?utm_source=sms&email=jo%40x.com",
+      "input": "https://Links.Test/sale?utm_source=sms&email=jo%40hilltop.example",
       "expected": "https://Links.Test/sale?utm_source=sms"
     },
     {
@@ -1549,17 +1549,17 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
     },
     {
       "name": "custom link host",
-      "text": "https://go.brand.com/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://go.hilltop.example/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1569,7 +1569,7 @@
       "text": "https://localhost:3000/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1579,7 +1579,7 @@
       "text": "HTTPS://HILLTOP.Links.Test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1589,7 +1589,7 @@
       "text": "  https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv\n",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1599,7 +1599,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv/",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1609,7 +1609,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv?utm_source=x",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1619,7 +1619,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv#top",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "AbCdEfGhIjKlMnOpQrStUv"
@@ -1629,7 +1629,7 @@
       "text": "https://hilltop.links.test/h/a-b_c-d_e-f_g-h_i-j_kl",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": "a-b_c-d_e-f_g-h_i-j_kl"
@@ -1639,7 +1639,7 @@
       "text": "http://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1649,7 +1649,7 @@
       "text": "straitlink://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1659,7 +1659,7 @@
       "text": "https://evil.example/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1669,7 +1669,7 @@
       "text": "https://hilltop.links.test.evil.example/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1679,7 +1679,7 @@
       "text": "https://xhilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1689,7 +1689,7 @@
       "text": "https://user@hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1699,7 +1699,7 @@
       "text": "https://hilltop.links.test:8443/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1709,7 +1709,7 @@
       "text": "https://hilltop.links.test/x/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1719,7 +1719,7 @@
       "text": "https://hilltop.links.test/H/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1729,7 +1729,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv/more",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1739,7 +1739,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv//",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1749,7 +1749,7 @@
       "text": "https://hilltop.links.test/a/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1759,7 +1759,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStU",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1769,7 +1769,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUvW",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1779,7 +1779,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOp.rStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1789,7 +1789,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrSt%55",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1799,7 +1799,7 @@
       "text": "https://hilltop.links.test/h/",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1809,7 +1809,7 @@
       "text": "https://hilltop.links.test/promo",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1819,7 +1819,7 @@
       "text": "Open https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv now",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1829,7 +1829,7 @@
       "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1839,7 +1839,7 @@
       "text": "",
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null
@@ -1849,7 +1849,7 @@
       "text": null,
       "linkHosts": [
         "hilltop.links.test",
-        "go.brand.com",
+        "go.hilltop.example",
         "localhost:3000"
       ],
       "expected": null

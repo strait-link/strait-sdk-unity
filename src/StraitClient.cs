@@ -95,7 +95,7 @@ namespace Strait
         public string PublishableKey { get; set; } = "";
         /// <summary>Your Strait link host, e.g. https://go.yourbrand.com</summary>
         public string Endpoint { get; set; } = "";
-        /// <summary>Extra hosts serving your short links (custom domains): "go.brand.com" or "https://go.brand.com".</summary>
+        /// <summary>Extra hosts serving your short links (custom domains): "go.hilltop.example" or "https://go.hilltop.example".</summary>
         public IList<string> LinkHosts { get; set; } = new List<string>();
         /// <summary>Persists "deferred check done" and unsent open reports across launches (e.g. a PlayerPrefs store). Default: in-memory.</summary>
         public IKeyValueStore? Storage { get; set; }

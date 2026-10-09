@@ -292,11 +292,11 @@ namespace Strait.Tests
         public async Task CustomDomainLinkHosts_BareOrUrl_AreShortLinks()
         {
             var resolved = Resolved();
-            var h = Make(new FakeEngine(resolved), linkHosts: new List<string> { "go.brand.com", "https://Short.Brand.com/" });
+            var h = Make(new FakeEngine(resolved), linkHosts: new List<string> { "go.hilltop.example", "https://Short.Hilltop.Example/" });
             await h.Strait.Start(null);
-            await h.Strait.HandleUrl("https://go.brand.com/x");
-            await h.Strait.HandleUrl("https://short.brand.com/y");
-            Assert.Equal(new[] { "links.test", "go.brand.com", "short.brand.com" }, h.Strait.LinkHosts.ToArray());
+            await h.Strait.HandleUrl("https://go.hilltop.example/x");
+            await h.Strait.HandleUrl("https://short.hilltop.example/y");
+            Assert.Equal(new[] { "links.test", "go.hilltop.example", "short.hilltop.example" }, h.Strait.LinkHosts.ToArray());
             Assert.Equal(2, h.Engine.Calls.Count(c => c.Path == "/v1/resolve"));
         }
 

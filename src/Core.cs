@@ -137,7 +137,7 @@ namespace Strait
 
         /// <summary>
         /// The Strait short-link hosts: the endpoint's host plus each configured link host, given
-        /// as a URL or a bare host ("go.brand.com", "localhost:3000"). Lower-cased, de-duplicated
+        /// as a URL or a bare host ("go.hilltop.example", "localhost:3000"). Lower-cased, de-duplicated
         /// in order; blanks and anything with a path or spaces are ignored; ports are kept.
         /// </summary>
         public static IReadOnlyList<string> NormalizeLinkHosts(string? endpoint, IEnumerable<string?>? linkHosts = null)
