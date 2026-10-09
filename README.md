@@ -268,12 +268,15 @@ var strait = new StraitClient(new StraitConfig
 });
 ```
 
-On the first launch after install (iOS only, once), the SDK asks iOS whether the clipboard
+On the first launch after install (iOS only, once), the SDK runs device matching
+(`/v1/match`) first; if that finds the install, the clipboard is never touched. Only on
+no match (or a failed request) does it ask iOS whether the clipboard
 probably holds a web link (`UIPasteboard detectPatterns`, iOS 15+). That check reads
 nothing and **shows no prompt**. Only if a link is likely does it read the clipboard,
 and **iOS then shows its "Allow Paste" prompt** to the player. A Strait handoff link is
 claimed with `POST /v1/handoff/claim` for an exact match (`LinkEvent.Route` =
-`"clipboard"`); anything else is ignored on the device and the normal signal match runs.
+`"clipboard"`); anything else is ignored on the device and the device match result stands. Both
+attempts share one `openId`.
 `CheckDeferred()` (debug) never reads the clipboard.
 
 The iOS clipboard comes from `IosStraitClipboard` (default in iOS player builds), backed

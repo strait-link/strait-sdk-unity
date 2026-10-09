@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Clipboard boost order (B19): the first-launch iPhone check now runs device matching
+  (`/v1/match`) first and reads the clipboard / claims the handoff only when it returns no
+  match or fails. A device match no longer shows iOS's "Allow Paste" prompt. Same `openId`
+  across both attempts; one event. `claimHandoff` is unchanged.
+
 ## 0.8.0
 
 - iPhone clipboard boost, opt-in (shared-spec/SDK-CONTRACT.md B19). New `StraitConfig.ClipboardBoost`

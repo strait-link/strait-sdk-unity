@@ -162,8 +162,9 @@ namespace Strait.Tests
                 $"{{\"matched\":true,\"longUrl\":\"https://shop.example/p/42?color=red\",\"linkId\":\"lnk_42\",\"clickId\":\"{Click.ToUpperInvariant()}\",\"matchMethod\":\"clipboard\"}}");
             var (s, storage, events) = Make(engine, clip, boost: true);
             await s.Start(null);
-            Assert.Equal(new[] { "/v1/handoff/claim" }, engine.Paths);
-            var body = engine.Calls[0].Body!.Value;
+            Assert.Equal(new[] { "/v1/match", "/v1/handoff/claim" }, engine.Paths); // device matching first
+            var body = engine.Calls[1].Body!.Value;
+            Assert.Equal(engine.Calls[0].Body!.Value.GetProperty("openId").GetString(), body.GetProperty("openId").GetString());
             Assert.Equal(PK, body.GetProperty("publishableKey").GetString());
             Assert.Equal(Token, body.GetProperty("token").GetString());
             Assert.Equal("ios", body.GetProperty("platform").GetString());
@@ -182,14 +183,45 @@ namespace Strait.Tests
         }
 
         [Fact]
-        public async Task Boost_ClaimRefused_FallsBackToSignalMatchWithSameOpenId()
+        public async Task Boost_DeviceMatchWins_ClipboardNeverTouched()
+        {
+            var clip = new SpyClipboard { Text = Handoff };
+            var engine = new Engine();
+            engine.Routes["/v1/match"] = (200, "{\"matched\":true,\"longUrl\":\"https://shop.example/p/7\",\"linkId\":\"lnk_7\"}");
+            engine.Routes["/v1/handoff/claim"] = (200, "{\"matched\":true,\"longUrl\":\"https://shop.example/x\",\"linkId\":\"lnk_1\"}");
+            var (s, _, events) = Make(engine, clip, boost: true);
+            await s.Start(null);
+            Assert.Equal(new[] { "/v1/match" }, engine.Paths);
+            Assert.Equal(0, clip.Detects + clip.Reads);
+            var e = events.Single();
+            Assert.Equal("fingerprint", e.Route);
+            Assert.True(e.Matched);
+        }
+
+        [Fact]
+        public async Task Boost_DeviceMatchUnanswered_StillTriesClipboard()
+        {
+            var clip = new SpyClipboard { Text = Handoff };
+            var engine = new Engine();
+            engine.Routes["/v1/match"] = (503, "");
+            engine.Routes["/v1/handoff/claim"] = (200, "{\"matched\":true,\"longUrl\":\"https://shop.example/x\",\"linkId\":\"lnk_1\"}");
+            var (s, storage, events) = Make(engine, clip, boost: true);
+            await s.Start(null);
+            Assert.Equal(new[] { "/v1/match", "/v1/handoff/claim" }, engine.Paths);
+            Assert.Equal("clipboard", events.Single().Route);
+            Assert.True(events.Single().Matched);
+            Assert.Equal("1", await storage.GetItemAsync(StraitClient.DeferredFlag));
+        }
+
+        [Fact]
+        public async Task Boost_ClaimRefused_KeepsSignalMatchResultWithSameOpenId()
         {
             var clip = new SpyClipboard { Text = Handoff };
             var engine = MatchMiss();
             engine.Routes["/v1/handoff/claim"] = (200, "{\"matched\":false,\"matchMethod\":\"none\",\"reason\":\"handoff_used\"}");
             var (s, storage, events) = Make(engine, clip, boost: true);
             await s.Start(null);
-            Assert.Equal(new[] { "/v1/handoff/claim", "/v1/match" }, engine.Paths);
+            Assert.Equal(new[] { "/v1/match", "/v1/handoff/claim" }, engine.Paths);
             Assert.Equal(engine.Calls[0].Body!.Value.GetProperty("openId").GetString(), engine.Calls[1].Body!.Value.GetProperty("openId").GetString());
             var e = events.Single();
             Assert.Equal("fingerprint", e.Route);
@@ -207,7 +239,7 @@ namespace Strait.Tests
             engine.Routes["/v1/handoff/claim"] = (status, "");
             var (s, storage, events) = Make(engine, clip, boost: true);
             await s.Start(null);
-            Assert.Equal(new[] { "/v1/handoff/claim" }, engine.Paths);
+            Assert.Equal(new[] { "/v1/match", "/v1/handoff/claim" }, engine.Paths);
             Assert.Equal("network", events.Single().Reason);
             Assert.Null(await storage.GetItemAsync(StraitClient.DeferredFlag));
         }

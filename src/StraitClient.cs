@@ -107,9 +107,9 @@ namespace Strait
         public Func<DeviceFields?>? DeviceFields { get; set; }
         /// <summary>
         /// iPhone clipboard boost (contract B19). Default false: the SDK never touches the clipboard. When true, the
-        /// once-per-install deferred check on iOS asks (no prompt) whether the clipboard holds a web URL and only then
-        /// reads it, which shows iOS's "Allow Paste" prompt; a Strait handoff link is claimed for an exact match,
-        /// otherwise the normal signal match runs. Turn on "Clipboard boost" in the workspace settings too.
+        /// once-per-install deferred check on iOS runs the signal match first; only if that finds nothing (or fails)
+        /// does it ask (no prompt) whether the clipboard holds a web URL and only then read it, which shows iOS's
+        /// "Allow Paste" prompt; a Strait handoff link is claimed for an exact match, otherwise the match result stands. Turn on "Clipboard boost" in the workspace settings too.
         /// </summary>
         public bool ClipboardBoost { get; set; }
         /// <summary>Clipboard access for <see cref="ClipboardBoost"/>. Default: <see cref="IosStraitClipboard"/> in iOS player builds, else none.</summary>
@@ -587,20 +587,6 @@ namespace Strait
                         }
                     }
                 }
-                // B19: iPhone clipboard boost, once per install only, and only when the app opted in.
-                if (!done && record && _config.Platform == "ios" && _config.ClipboardBoost)
-                {
-                    var token = await HandoffTokenFromClipboard();
-                    if (token != null)
-                    {
-                        var res = await Claim(token, id, t0);
-                        if (IsTrue(res.Json, "matched"))
-                        {
-                            ApplyClaim(ev, res, t0);
-                            done = true;
-                        }
-                    }
-                }
                 if (!done)
                 {
                     var fields = new List<KeyValuePair<string, object?>>
@@ -625,6 +611,28 @@ namespace Strait
                 ev.Matched = false;
                 ev.Reason = "network";
                 ev.Url = null; ev.Path = null; ev.Params = null; ev.LinkId = null;
+            }
+            // B19: device matching first; the clipboard only when it found nothing, once per install, on iOS,
+            // and only when the app opted in. Same openId as the match, so the install is counted once.
+            if (!ev.Matched && record && _config.Platform == "ios" && _config.ClipboardBoost)
+            {
+                var token = await HandoffTokenFromClipboard();
+                if (token != null)
+                {
+                    try
+                    {
+                        var res = await Claim(token, id, t0);
+                        if (IsTrue(res.Json, "matched")) ApplyClaim(ev, res, t0);
+                        // Not claimable: keep the device match result.
+                    }
+                    catch
+                    {
+                        ev.Route = LinkRoutes.Clipboard;
+                        ev.Matched = false;
+                        ev.Reason = "network";
+                        ev.Url = null; ev.Path = null; ev.Params = null; ev.LinkId = null;
+                    }
+                }
             }
             ev.Ms = Now() - t0;
             return Emit(ev);
