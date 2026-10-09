@@ -376,6 +376,11 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is
   wrapped with `unchecked` to match JS's 32-bit `|0`.
 
+## Support
+
+Questions or a bug: support@straitlink.in (replies within 1 working day, IST) or open a GitHub issue.
+Security issues: see [SECURITY.md](SECURITY.md). Service status: https://straitlink.in/platform-status/
+
 ## Test
 
 ```sh

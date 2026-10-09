@@ -1546,9 +1546,9 @@
   "parseHandoffUrl": [
     {
       "name": "exact link",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1558,7 +1558,7 @@
       "name": "custom link host",
       "text": "https://go.brand.com/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1568,7 +1568,7 @@
       "name": "host with port",
       "text": "https://localhost:3000/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1576,9 +1576,9 @@
     },
     {
       "name": "upper-case scheme and host",
-      "text": "HTTPS://ACME.Links.Test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "HTTPS://HILLTOP.Links.Test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1586,9 +1586,9 @@
     },
     {
       "name": "surrounding whitespace and newline",
-      "text": "  https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv\n",
+      "text": "  https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv\n",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1596,9 +1596,9 @@
     },
     {
       "name": "one trailing slash",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv/",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv/",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1606,9 +1606,9 @@
     },
     {
       "name": "query ignored",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv?utm_source=x",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv?utm_source=x",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1616,9 +1616,9 @@
     },
     {
       "name": "fragment ignored",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv#top",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv#top",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1626,9 +1626,9 @@
     },
     {
       "name": "token with - and _",
-      "text": "https://acme.links.test/h/a-b_c-d_e-f_g-h_i-j_kl",
+      "text": "https://hilltop.links.test/h/a-b_c-d_e-f_g-h_i-j_kl",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1636,9 +1636,9 @@
     },
     {
       "name": "http refused",
-      "text": "http://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "http://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1646,9 +1646,9 @@
     },
     {
       "name": "custom scheme refused",
-      "text": "straitlink://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "straitlink://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1658,7 +1658,7 @@
       "name": "foreign host",
       "text": "https://evil.example/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1666,9 +1666,9 @@
     },
     {
       "name": "look-alike suffix host",
-      "text": "https://acme.links.test.evil.example/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test.evil.example/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1676,9 +1676,9 @@
     },
     {
       "name": "look-alike prefix host",
-      "text": "https://xacme.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://xhilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1686,9 +1686,9 @@
     },
     {
       "name": "user info refused",
-      "text": "https://user@acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://user@hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1696,9 +1696,9 @@
     },
     {
       "name": "wrong port",
-      "text": "https://acme.links.test:8443/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test:8443/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1706,9 +1706,9 @@
     },
     {
       "name": "wrong path prefix",
-      "text": "https://acme.links.test/x/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test/x/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1716,9 +1716,9 @@
     },
     {
       "name": "upper-case path prefix",
-      "text": "https://acme.links.test/H/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test/H/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1726,9 +1726,9 @@
     },
     {
       "name": "extra path segment",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv/more",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv/more",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1736,9 +1736,9 @@
     },
     {
       "name": "two trailing slashes",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv//",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv//",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1746,9 +1746,9 @@
     },
     {
       "name": "nested under a path",
-      "text": "https://acme.links.test/a/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test/a/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1756,9 +1756,9 @@
     },
     {
       "name": "token too short",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStU",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStU",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1766,9 +1766,9 @@
     },
     {
       "name": "token too long",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUvW",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUvW",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1776,9 +1776,9 @@
     },
     {
       "name": "token with a bad character",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOp.rStUv",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOp.rStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1786,9 +1786,9 @@
     },
     {
       "name": "token percent-encoded",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrSt%55",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrSt%55",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1796,9 +1796,9 @@
     },
     {
       "name": "no token",
-      "text": "https://acme.links.test/h/",
+      "text": "https://hilltop.links.test/h/",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1806,9 +1806,9 @@
     },
     {
       "name": "a short link, not a handoff",
-      "text": "https://acme.links.test/promo",
+      "text": "https://hilltop.links.test/promo",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1816,9 +1816,9 @@
     },
     {
       "name": "text around the link",
-      "text": "Open https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv now",
+      "text": "Open https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv now",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1826,9 +1826,9 @@
     },
     {
       "name": "two links",
-      "text": "https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv https://acme.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
+      "text": "https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv https://hilltop.links.test/h/AbCdEfGhIjKlMnOpQrStUv",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1838,7 +1838,7 @@
       "name": "empty",
       "text": "",
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],
@@ -1848,7 +1848,7 @@
       "name": "null",
       "text": null,
       "linkHosts": [
-        "acme.links.test",
+        "hilltop.links.test",
         "go.brand.com",
         "localhost:3000"
       ],

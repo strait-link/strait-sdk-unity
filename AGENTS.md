@@ -27,7 +27,7 @@ Keep `?path=src`. Android also needs `com.android.installreferrer:installreferre
 ```csharp
 Client = new StraitClient(new StraitConfig {
     PublishableKey = "st_pub_live_…",          // never the secret key
-    Endpoint = "https://acme.strait.link",         // the workspace's link domain
+    Endpoint = "https://hilltop.strait.link",         // the workspace's link domain
     Storage = new PlayerPrefsStore(),
     Platform = /* "android" | "ios" | "other" */,
     DeviceFields = StraitDevice.Collect,       // browser-equivalent values; not Screen.width
@@ -41,11 +41,28 @@ await Client.Start(Application.absoluteURL);                           // launch
 Forward `OnApplicationPause` / `OnApplicationFocus` to `Client.OnAppState(...)`. On WebGL set
 `Transport = new UnityWebRequestTransport()`.
 
+## Stop and ask the human
+
+These steps need a person. Don't guess, invent values or work around them; stop and ask:
+
+- **Signup and workspace**: creating the Strait account and workspace at https://app.straitlink.in (there is no API for it).
+- **Keys**: the publishable key (`st_pub_live_…`) and, for server code only, the secret key. Ask the human to paste the publishable key; never ask for the secret key to go into the app.
+- **Dashboard settings**: the app's Android package + SHA-256 fingerprints, iPhone Team ID + bundle id, the workspace handle and any custom link domain (Dashboard → Settings).
+- **Store and signing**: the Play App Signing SHA-256 (Play Console → App integrity), Google Play / App Store uploads, Apple Team ID and entitlements in the exported Xcode project.
+- **A real phone**: the final tap test below. Simulators and the editor can't prove that a verified link opens the app.
+
 ## Verify
 
-Run these; don't assume.
+Run these; don't assume. Loop until each one passes: fix what it reports, then run it again.
 
 ```sh
+# 0. Keyless check of the link domain's App Links / Universal Links files (each finding has a fix)
+curl "https://strait.link/v1/tools/app-links?domain=<handle>.strait.link"
+
+# 0b. Dry-run a tap: what this link would do on a given phone, without recording a tap
+curl "https://strait.link/v1/simulate?url=https://<handle>.strait.link/<slug>&ua=android&publishableKey=st_pub_live_…"
+#    ua presets: android, iphone, ipad, desktop, instagram-ios, instagram-android, facebook-android, whatsapp-android, bot
+
 # 1. The link domain serves the verification files with this app in them
 curl https://<handle>.strait.link/.well-known/assetlinks.json              # Android: package + every SHA-256
 curl https://<handle>.strait.link/.well-known/apple-app-site-association   # iPhone: TeamID.bundleId
