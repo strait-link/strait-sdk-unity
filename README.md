@@ -17,7 +17,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
   <a href="https://github.com/bazingga08/strait-sdk-unity/tags"><img alt="Latest version" src="https://img.shields.io/github/v/tag/bazingga08/strait-sdk-unity?sort=semver&label=version&style=flat-square&labelColor=0F0D0A&color=423B33"></a>
   <a href="https://straitlink.in/platform-status/"><img alt="SDK: Beta" src="https://img.shields.io/badge/SDK-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
   <a href="https://straitlink.in/docs/iphone-install-matching/"><img alt="iPhone: Beta" src="https://img.shields.io/badge/iPhone-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
-  <a href="https://github.com/bazingga08/strait-sdk-unity/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/bazingga08/strait-sdk-unity/ci.yml?branch=main&label=CI&style=flat-square&labelColor=0F0D0A&color=423B33"></a>
+  <a href="https://github.com/bazingga08/strait-sdk-unity/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/bazingga08/strait-sdk-unity/ci.yml?branch=main&label=CI&style=flat-square&labelColor=0F0D0A"></a>
   <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-423B33?style=flat-square&labelColor=0F0D0A"></a>
 </p>
 
