@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- README: the common Strait SDK header (logo, the promise "Straight to the screen. On the record.",
+  badges, links to docs, platform status and the changelog), a platform features table in the
+  availability words (Live / Beta / Planned / Not yet) with the iPhone beta truth (the method is
+  the customer's choice, device matching off by default), and a "Docs and support" section
+  (Talk to the Strait team). The same structure in all seven SDK READMEs (design system v5).
 - iPhone deferred method is the customer's choice, applied at runtime (founder decision
   10 Oct 2026). Dashboard Settings → iPhone installs has two switches, device matching and
   paste handoff; off/off, device only, paste only and both all work. The SDK now reads the

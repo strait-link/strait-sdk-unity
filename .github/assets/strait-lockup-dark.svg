@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="145.25" height="48" viewBox="0 0 145.25 48" role="img" aria-label="Strait">
+  <title>Strait</title>
+  <g fill="#FF6A13">
+    <path d="M15 8A13 13 0 0 0 15 34Z"/>
+    <path d="M18.25 42A13 13 0 0 0 18.25 16Z"/>
+  </g>
+  <g transform="translate(42.25 0)">
+    <g fill="none" stroke="#F6F3EE" stroke-width="4.6" stroke-linejoin="round">
+      <!-- s -->
+      <path d="M16.2 21.6C14.8 19.3 12.3 18.3 9.1 18.3C5.3 18.3 2.6 20.1 2.6 23.1C2.6 26.4 5.9 27.2 9.4 27.9C13.2 28.7 16.6 29.6 16.6 33.2C16.6 36.2 13.6 37.7 9.5 37.7C5.9 37.7 3.2 36.4 1.8 33.9"/>
+      <!-- t -->
+      <path d="M26 9V32.2C26 35.8 27.6 37.7 31 37.7H33"/>
+      <path d="M20.5 18.3H32.6"/>
+      <!-- r -->
+      <path d="M39.5 16V40"/>
+      <path d="M39.5 26.4C39.5 20.8 42.6 18.3 47.6 18.3H49"/>
+      <!-- a -->
+      <circle cx="63.6" cy="28" r="9.4"/>
+      <path d="M73 16V40"/>
+      <!-- i -->
+      <path d="M83.5 16V40"/>
+      <!-- t -->
+      <path d="M93 9V32.2C93 35.8 94.6 37.7 98 37.7H100"/>
+      <path d="M87.5 18.3H99.6"/>
+    </g>
+    <!-- i dot -->
+    <circle cx="83.5" cy="9.8" r="2.9" fill="#F6F3EE"/>
+  </g>
+</svg>

@@ -1,12 +1,36 @@
-# Strait SDK for Unity
+<!-- Header: the same in every Strait SDK README (design system v5). -->
+<p align="center">
+  <a href="https://straitlink.in">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/strait-lockup-dark.svg">
+      <img src=".github/assets/strait-lockup.svg" alt="Strait" width="160" height="53">
+    </picture>
+  </a>
+</p>
+
+<h1 align="center">Strait SDK for Unity</h1>
+
+<p align="center"><strong>Straight to the screen. On the record.</strong><br>
+A tap opens the exact screen, and every link open and install is recorded in your Strait dashboard.</p>
+
+<p align="center">
+  <a href="https://github.com/bazingga08/strait-sdk-unity/tags"><img alt="Latest version" src="https://img.shields.io/github/v/tag/bazingga08/strait-sdk-unity?sort=semver&label=version&style=flat-square&labelColor=0F0D0A&color=423B33"></a>
+  <a href="https://straitlink.in/platform-status/"><img alt="SDK: Beta" src="https://img.shields.io/badge/SDK-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
+  <a href="https://straitlink.in/docs/iphone-install-matching/"><img alt="iPhone: Beta" src="https://img.shields.io/badge/iPhone-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
+  <a href="https://github.com/bazingga08/strait-sdk-unity/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/bazingga08/strait-sdk-unity/ci.yml?branch=main&label=CI&style=flat-square&labelColor=0F0D0A&color=423B33"></a>
+  <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-423B33?style=flat-square&labelColor=0F0D0A"></a>
+</p>
+
+<p align="center">
+  <a href="https://straitlink.in/docs/sdks/unity/">Docs</a> ·
+  <a href="https://straitlink.in/platform-status/">Platform status</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="#docs-and-support">Talk to the Strait team</a>
+</p>
 
 `strait-sdk-unity` (C#)
 
-> **Availability:** Android: Live · iPhone install matching: **Beta** (not yet proven on a real iPhone) · SDK: Beta (the Unity glue has not been run in the Unity editor yet).
-> [Platform status](https://straitlink.in/platform-status/) · [Docs](https://straitlink.in/docs/)
-
-Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in):
-straight to the screen, on the record (every tap opens the exact screen, and every tap is recorded).
+Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
 Version **0.8.0**. It is at parity with the React Native reference SDK
 (the Strait SDK contract).
 
@@ -20,6 +44,45 @@ built-in writer and parser (`StraitJson`).
 > PlayerPrefs, AndroidJavaObject, iOS plugin, UnityWebRequest) has not been run in the
 > Unity editor or on a device. It is a documented sketch: check it on real devices
 > before you ship.
+
+## Platform features
+
+| Feature | Status | Notes |
+|---|---|---|
+| Android: direct links and deferred links | ● Live |  |
+| iPhone: Universal Links and install matching | ◐ Beta | Your choice in Dashboard → Settings → iPhone installs: device matching, paste handoff, both or neither, read from Strait at runtime. Device matching is off by default. iPhone matches are labelled Estimated until measured. |
+| Unity glue (MonoBehaviour, PlayerPrefs, plugins) | ◐ Beta | Not yet run in the Unity editor or on a device. |
+| C# library (`netstandard2.1`) | ◐ Beta | CI-checked with `dotnet test` against the shared vectors. |
+| OpenUPM | – Not yet | Add it from the git URL until it is listed. |
+
+● Live · ◐ Beta · ○ Planned · – Not yet. The same words as the [platform status](https://straitlink.in/platform-status/) page.
+
+## Install
+
+Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
+
+<!-- brand:install -->
+Unity **Window → Package Manager → + → Add package from git URL…**:
+
+```text
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.0
+```
+
+Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
+<!-- /brand:install -->
+
+The OpenUPM listing is still pending; the git URL above works today.
+
+The package (folder `src/`) compiles into the `Strait.Sdk` assembly; everything is in
+namespace `Strait`. Package Manager → this package → *Samples* → **Quick start** imports a
+ready-made `StraitBootstrap` MonoBehaviour.
+
+Without Package Manager: copy `src/*.cs` into your project (for example
+`Assets/Strait/`), or build `src/Strait.Signature.csproj` and drop the DLL into
+`Assets/Plugins/`.
+
+**Publishable key:** Dashboard → Get started → Publishable key (`st_pub_live_…`). It is
+safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 
 ## Contract coverage
 
@@ -66,33 +129,6 @@ Navigation never waits for a report. The first launch of an install is marked as
 such, so dashboards can tell **new users** (installed and opened) from **existing
 users** (already had the game). The deferred check is only marked done once the
 server answered, so an offline first launch is retried on the next launch.
-
-## Install
-
-Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
-
-<!-- brand:install -->
-Unity **Window → Package Manager → + → Add package from git URL…**:
-
-```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.0
-```
-
-Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
-<!-- /brand:install -->
-
-The OpenUPM listing is still pending; the git URL above works today.
-
-The package (folder `src/`) compiles into the `Strait.Sdk` assembly; everything is in
-namespace `Strait`. Package Manager → this package → *Samples* → **Quick start** imports a
-ready-made `StraitBootstrap` MonoBehaviour.
-
-Without Package Manager: copy `src/*.cs` into your project (for example
-`Assets/Strait/`), or build `src/Strait.Signature.csproj` and drop the DLL into
-`Assets/Plugins/`.
-
-**Publishable key:** Dashboard → Get started → Publishable key (`st_pub_live_…`). It is
-safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 
 ## Wire it into a game
 
@@ -385,13 +421,15 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is
   wrapped with `unchecked` to match JS's 32-bit `|0`.
 
-## Support
-
-Questions or a bug? Talk to the Strait team: support@straitlink.in (replies within 1 working day) or open a GitHub issue.
-Security issues: see [SECURITY.md](SECURITY.md). Service status: https://straitlink.in/platform-status/
-
 ## Test
 
 ```sh
 dotnet test test/Strait.Signature.Tests.csproj   # what CI runs (.NET 8)
 ```
+
+## Docs and support
+
+- **Docs:** [straitlink.in/docs/sdks/unity/](https://straitlink.in/docs/sdks/unity/) · [platform status](https://straitlink.in/platform-status/) · [troubleshooting](https://straitlink.in/docs/troubleshooting/)
+- **Talk to the Strait team:** [support@straitlink.in](mailto:support@straitlink.in) (replies within 1 working day, IST) or call +91 81218 61890.
+- **Bugs and feature requests:** [open an issue](https://github.com/bazingga08/strait-sdk-unity/issues) on this repo.
+- **Security:** never in a public issue. Write to security@straitlink.in (see [SECURITY.md](SECURITY.md)).
