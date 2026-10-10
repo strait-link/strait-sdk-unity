@@ -62,8 +62,9 @@ namespace Strait
     }
 
     /// <summary>
-    /// Clipboard access for the iPhone clipboard boost (contract B19). Only used when
-    /// <see cref="StraitConfig.ClipboardBoost"/> is true (or by <see cref="StraitClient.ClaimHandoff"/>).
+    /// Clipboard access for the iPhone paste handoff (contract B19). Only used when the workspace turned on
+    /// Paste handoff in Dashboard Settings → iPhone installs (the engine says so live in its /v1/match reply,
+    /// <c>ios.pasteHandoff</c>) and device matching found nothing, or by <see cref="StraitClient.ClaimHandoff"/>.
     /// On iOS, <see cref="IosStraitClipboard"/> implements it with UIPasteboard.
     /// </summary>
     public interface IStraitClipboard
@@ -106,13 +107,14 @@ namespace Strait
         /// <summary>Collects the device fingerprint fields. Called on demand.</summary>
         public Func<DeviceFields?>? DeviceFields { get; set; }
         /// <summary>
-        /// iPhone clipboard boost (contract B19). Default false: the SDK never touches the clipboard. When true, the
-        /// once-per-install deferred check on iOS runs the signal match first; only if that finds nothing (or fails)
-        /// does it ask (no prompt) whether the clipboard holds a web URL and only then read it, which shows iOS's
-        /// "Allow Paste" prompt; a Strait handoff link is claimed for an exact match, otherwise the match result stands. Turn on "Clipboard boost" in the workspace settings too.
+        /// Obsolete and ignored. The customer now chooses the iPhone deferred-link method in Dashboard Settings →
+        /// iPhone installs (device matching, paste handoff, both or neither), and the SDK reads that choice live
+        /// from the engine's /v1/match reply on the once-per-install check, so a change needs no app release
+        /// (contract B19). Kept so existing code still compiles.
         /// </summary>
+        [Obsolete("Ignored: Paste handoff is switched on or off in Dashboard Settings → iPhone installs and read from the engine at runtime.")]
         public bool ClipboardBoost { get; set; }
-        /// <summary>Clipboard access for <see cref="ClipboardBoost"/>. Default: <see cref="IosStraitClipboard"/> in iOS player builds, else none.</summary>
+        /// <summary>Clipboard access for the paste handoff. Default: <see cref="IosStraitClipboard"/> in iOS player builds, else none.</summary>
         public IStraitClipboard? Clipboard { get; set; }
         /// <summary>HTTP transport. Default: <see cref="HttpClientTransport"/>.</summary>
         public IStraitTransport? Transport { get; set; }
@@ -555,6 +557,7 @@ namespace Strait
             var id = StraitCore.NewOpenId(t0);
             Announce(new LinkStart { Id = id, Kind = "deferred", AppState = LinkAppStates.Closed, At = t0 });
             var ev = new LinkEvent { Id = id, Kind = "deferred", Route = LinkRoutes.Fingerprint, AppState = LinkAppStates.Closed, At = t0 };
+            bool pasteHandoff = false;
             try
             {
                 bool done = false;
@@ -597,6 +600,9 @@ namespace Strait
                     AddDevice(fields);
                     if (record) { fields.Add(Kv("openId", id)); fields.Add(Kv("at", t0)); }
                     var res = await Answered("/v1/match", fields);
+                    // The workspace's live iPhone choice (Dashboard Settings → iPhone installs). Read from this
+                    // reply only, never stored, so the next check asks the engine again. Missing (older engine) = off.
+                    pasteHandoff = Get(res.Json, "ios") is Dictionary<string, object?> ios && IsTrue(ios, "pasteHandoff");
                     bool matched = IsTrue(res.Json, "matched");
                     ev.Matched = matched;
                     ev.Reason = matched ? null : "no_match";
@@ -612,9 +618,11 @@ namespace Strait
                 ev.Reason = "network";
                 ev.Url = null; ev.Path = null; ev.Params = null; ev.LinkId = null;
             }
-            // B19: device matching first; the clipboard only when it found nothing, once per install, on iOS,
-            // and only when the app opted in. Same openId as the match, so the install is counted once.
-            if (!ev.Matched && record && _config.Platform == "ios" && _config.ClipboardBoost)
+            // B19: device matching first; the clipboard only when the engine answered without a match and said
+            // the workspace has Paste handoff on, once per install, on iOS. No answer (reason "network") = the
+            // choice is unknown, so the clipboard stays untouched and the check runs again next launch.
+            // Same openId as the match, so the install is counted once.
+            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios")
             {
                 var token = await HandoffTokenFromClipboard();
                 if (token != null)

@@ -42,7 +42,7 @@ built-in writer and parser (`StraitJson`).
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
-| B19 | iPhone clipboard boost, opt-in (`ClipboardBoost`, default false): detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`, else the normal `/v1/match`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
+| B19 | iPhone paste handoff, chosen in the Dashboard and read live from the `/v1/match` reply (`ios.pasteHandoff`): device matching first, then detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
 
 ### What Strait records automatically (no extra code)
 
@@ -53,7 +53,7 @@ Every time a link opens the game, the client reports it once (contract B14):
 | Verified link tapped in WhatsApp, Gmail, Messages… | `/v1/resolve` (the lookup is the report) | the link; also counted as a tap |
 | Browser handed off to the game (`yourgame://…`) | `/v1/open` | the exact tap (`strait_click`, removed before `OnLink` sees the URL) |
 | First open after a Play install | `/v1/referrer` | the exact tap that sent the user to the store |
-| First open after an App Store install | `/v1/match` (or `/v1/handoff/claim` with the clipboard boost) | the matched tap |
+| First open after an App Store install | `/v1/match` (then `/v1/handoff/claim` when the workspace turned on paste handoff) | the matched tap |
 | Your own https links | `/v1/open` | the URL (tap id removed); the server keeps host + path only, never the query |
 
 Reports that can't be sent (offline, server busy) are saved in `Storage` (the same
@@ -243,41 +243,46 @@ extern "C" {
 }
 ```
 
-### iPhone install matching and the clipboard boost (B19)
+### iPhone deferred links: you choose the method (B19)
 
-On iPhone there is no install referrer. By default Strait matches the first open to the
-tap with a few short-lived signals (IP kept only as a keyed hash, screen, language, time
-zone, iOS version), kept for one hour and used only to open the right screen in your
-game. It is routing, not tracking: no advertising, no sharing, no linking across apps.
-How it works, and a ready-made App Store privacy label section:
-https://straitlink.in/docs/iphone-install-matching/
+On iPhone there is no install referrer. **You choose, in the Dashboard (Settings → iPhone
+installs), how Strait finds the link after an install.** There are two switches, and any
+combination works:
 
-The workspace owner can turn signal matching off in the Dashboard (Settings → **iPhone
-install matching**). Then the tap page stores no device signals and iPhone installs are
-not matched by signals (Android's Play Install Referrer is unaffected).
+| Device matching | Paste handoff | What happens on the first launch after install |
+|---|---|---|
+| off | off | No deferred link on iPhone. The install is counted; the game opens normally. |
+| on | off | Device matching only. |
+| off | on | Paste handoff only. |
+| on | on | Device matching first; paste handoff only when it finds nothing. |
 
-**Clipboard boost (optional, off by default).** For an exact match, turn on **Clipboard
-boost** in the workspace settings (the tap page's "Get the app" button then copies a
-short-lived, single-use Strait link) and opt in in the game:
+- **Device matching** matches the first open to the tap with a few short-lived signals
+  (IP kept only as a keyed hash, screen, language, time zone, iOS version), kept for one
+  hour and used only to open the right screen in your game. It is routing, not tracking:
+  no advertising, no sharing, no linking across apps. **Apple policy note:** Apple's
+  rules say fingerprinting is not allowed, whether or not the user allows tracking. Read
+  how it works and decide whether it fits your app's App Store review:
+  https://straitlink.in/docs/iphone-install-matching/ (also has a ready-made privacy
+  label section).
+- **Paste handoff** makes the tap page's "Get the app" button copy a short-lived,
+  single-use Strait link. On first launch the SDK asks iOS, without a prompt, whether the
+  clipboard probably holds a web link (`UIPasteboard detectPatterns`, iOS 15+); only then
+  does it read it, and **iOS shows its "Allow Paste" prompt** to the player. A Strait
+  handoff link is claimed with `POST /v1/handoff/claim` for an exact match
+  (`LinkEvent.Route` = `"clipboard"`); anything else is ignored on the device.
 
-```csharp
-var strait = new StraitClient(new StraitConfig
-{
-    // …as above…
-    ClipboardBoost = true,   // default false: the SDK never touches the clipboard
-});
-```
+**Device matching is off by default for new workspaces** (existing workspaces keep their
+settings). Paste handoff is off by default.
 
-On the first launch after install (iOS only, once), the SDK runs device matching
-(`/v1/match`) first; if that finds the install, the clipboard is never touched. Only on
-no match (or a failed request) does it ask iOS whether the clipboard
-probably holds a web link (`UIPasteboard detectPatterns`, iOS 15+). That check reads
-nothing and **shows no prompt**. Only if a link is likely does it read the clipboard,
-and **iOS then shows its "Allow Paste" prompt** to the player. A Strait handoff link is
-claimed with `POST /v1/handoff/claim` for an exact match (`LinkEvent.Route` =
-`"clipboard"`); anything else is ignored on the device and the device match result stands. Both
-attempts share one `openId`.
-`CheckDeferred()` (debug) never reads the clipboard.
+**The choice applies at runtime, with no game update.** The game sets nothing for this.
+On the first launch after install (iOS only, once), the SDK calls `/v1/match`; the
+engine's reply carries the workspace's current choice (`ios.pasteHandoff`), and the SDK
+reads the clipboard only when that reply found no match and says paste handoff is on. The
+choice is never stored on the device. If the request fails, the clipboard is not touched
+and the check runs again on the next launch (`Reason` = `"network"`). Both attempts share
+one `openId`. `CheckDeferred()` (debug) never reads the clipboard.
+
+`StraitConfig.ClipboardBoost` is obsolete and ignored (kept so old code compiles).
 
 The iOS clipboard comes from `IosStraitClipboard` (default in iOS player builds), backed
 by `src/Plugins/iOS/StraitClipboard.mm`. You can pass your own `IStraitClipboard` as
@@ -289,8 +294,8 @@ consent, and the result arrives as a normal `OnLink` event.
 > ⚠️ `StraitClipboard.mm` and the `[DllImport("__Internal")]` wrapper have **not** been
 > compiled or run: this repository's CI is .NET only and nobody has built it in Xcode or
 > tried it on an iPhone yet. The C# logic around it (when to detect, read, claim or fall
-> back) is unit-tested in CI with a clipboard spy, including that the clipboard is never
-> touched by default.
+> back) is unit-tested in CI with a clipboard spy, for all four Dashboard combinations,
+> including that the clipboard is never touched unless the engine says paste handoff is on.
 
 ### Android Play Install Referrer
 

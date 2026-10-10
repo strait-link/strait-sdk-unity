@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 namespace Strait
 {
     /// <summary>
-    /// The iPhone clipboard for the clipboard boost (contract B19), backed by Plugins/iOS/StraitClipboard.mm:
+    /// The iPhone clipboard for the paste handoff (contract B19), backed by Plugins/iOS/StraitClipboard.mm:
     /// <see cref="HasProbableWebUrlAsync"/> uses UIPasteboard detectPatterns (probableWebURL), which shows no prompt
     /// (iOS 15+; false on older iOS); <see cref="ReadTextAsync"/> reads UIPasteboard.general.string, which shows iOS's
     /// "Allow Paste" prompt. Outside an iOS player build (Editor, Android, tests) it never touches any clipboard:
-    /// detection answers false and reading answers null. The SDK only calls it when the app set
-    /// <see cref="StraitConfig.ClipboardBoost"/>.
+    /// detection answers false and reading answers null. The SDK only calls it on the once-per-install check when
+    /// device matching found nothing and the engine's /v1/match reply said the workspace turned on Paste handoff
+    /// (Dashboard Settings → iPhone installs), or from <see cref="StraitClient.ClaimHandoff"/>.
     /// </summary>
     public sealed class IosStraitClipboard : IStraitClipboard
     {

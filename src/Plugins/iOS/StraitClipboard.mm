@@ -1,9 +1,9 @@
-// Strait SDK: iPhone clipboard boost (contract B19), native side of IosStraitClipboard.cs.
+// Strait SDK: iPhone paste handoff (contract B19), native side of IosStraitClipboard.cs.
 // - StraitClipboard_DetectProbableWebURL: UIPasteboard detectPatterns (probableWebURL). It never reads the
 //   clipboard, so iOS shows NO paste prompt. iOS 15+; older iOS answers 0. The callback runs on the main queue.
 // - StraitClipboard_ReadText: UIPasteboard.general.string. This READS the clipboard, so iOS shows its
-//   "Allow Paste" prompt. The SDK calls it only when the app set ClipboardBoost and detection said a web URL
-//   is probably there.
+//   "Allow Paste" prompt. The SDK calls it only when the workspace turned on Paste handoff (read live from
+//   the engine's /v1/match reply), device matching found nothing, and detection said a web URL is probably there.
 // Not compiled in this repository's CI (which is .NET only); it is compiled by Xcode in the game's iOS build.
 #import <UIKit/UIKit.h>
 #include <string.h>

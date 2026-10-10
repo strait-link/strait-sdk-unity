@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- iPhone deferred method is the customer's choice, applied at runtime (founder decision
+  10 Oct 2026). Dashboard Settings → iPhone installs has two switches, device matching and
+  paste handoff; off/off, device only, paste only and both all work. The SDK now reads the
+  choice live from the engine's `/v1/match` reply (`ios: {deviceMatching, pasteHandoff}`)
+  on the once-per-install check and never stores it, so a change needs no game update. The
+  clipboard is read only when that reply found no match and says `pasteHandoff: true`; a
+  failed `/v1/match` no longer reads the clipboard (reason `network`, retried next launch);
+  an older engine without the field means off. Device matching is off by default for new
+  workspaces (engine migration 0061). `StraitConfig.ClipboardBoost` is `[Obsolete]` and
+  ignored.
 - Clipboard boost order (B19): the first-launch iPhone check now runs device matching
   (`/v1/match`) first and reads the clipboard / claims the handoff only when it returns no
   match or fails. A device match no longer shows iOS's "Allow Paste" prompt. Same `openId`
