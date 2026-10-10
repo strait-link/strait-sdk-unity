@@ -5,7 +5,8 @@
 > **Availability:** Android: Live · iPhone install matching: **Beta** (not yet proven on a real iPhone) · SDK: Beta (the Unity glue has not been run in the Unity editor yet).
 > [Platform status](https://straitlink.in/platform-status/) · [Docs](https://straitlink.in/docs/)
 
-Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in).
+Deep links and deferred deep links for Unity games. Part of [Strait](https://straitlink.in):
+straight to the screen, on the record (every tap opens the exact screen, and every tap is recorded).
 Version **0.8.0**. It is at parity with the React Native reference SDK
 (the Strait SDK contract).
 
@@ -112,7 +113,7 @@ public class StraitLinks : MonoBehaviour
         {
             PublishableKey = "st_pub_live_…",
             Endpoint = "https://<your-handle>.strait.link",
-            LinkHosts = { "go.yourbrand.com" },          // custom domains, if any
+            LinkHosts = { "go.yourbrand.com" },          // custom domains (coming soon), if any
             Storage = new PlayerPrefsStore(),
             Platform = Application.platform == RuntimePlatform.Android ? "android"
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
@@ -243,7 +244,7 @@ extern "C" {
 }
 ```
 
-### iPhone deferred links: you choose the method (B19)
+### iPhone deferred links (beta): you choose the method (B19)
 
 On iPhone there is no install referrer. **You choose, in the Dashboard (Settings → iPhone
 installs), how Strait finds the link after an install.** There are two switches, and any
@@ -386,7 +387,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 
 ## Support
 
-Questions or a bug: support@straitlink.in (replies within 1 working day, IST) or open a GitHub issue.
+Questions or a bug? Talk to the Strait team: support@straitlink.in (replies within 1 working day) or open a GitHub issue.
 Security issues: see [SECURITY.md](SECURITY.md). Service status: https://straitlink.in/platform-status/
 
 ## Test

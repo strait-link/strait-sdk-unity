@@ -47,7 +47,7 @@ These steps need a person. Don't guess, invent values or work around them; stop 
 
 - **Signup and workspace**: creating the Strait account and workspace at https://app.straitlink.in (there is no API for it).
 - **Keys**: the publishable key (`st_pub_live_…`) and, for server code only, the secret key. Ask the human to paste the publishable key; never ask for the secret key to go into the app.
-- **Dashboard settings**: the app's Android package + SHA-256 fingerprints, iPhone Team ID + bundle id, the workspace handle and any custom link domain (Dashboard → Settings).
+- **Dashboard settings**: the app's Android package + SHA-256 fingerprints, iPhone Team ID + bundle id, the workspace handle (Dashboard → Settings). Custom link domains are coming soon.
 - **Store and signing**: the Play App Signing SHA-256 (Play Console → App integrity), Google Play / App Store uploads, Apple Team ID and entitlements in the exported Xcode project.
 - **A real phone**: the final tap test below. Simulators and the editor can't prove that a verified link opens the app.
 
@@ -75,7 +75,8 @@ adb shell pm get-app-links <package.name>
 3. Tap a link from WhatsApp or Gmail on a real phone: the app opens on the right screen and `onLink` fires
    with `matched: true`. The tap and the open appear in Dashboard → Analytics.
 4. Deferred (Android): install from a Google Play internal-testing build, tap the link before installing, open
-   the app: `onLink` fires with `kind: deferred`, `route: install_referrer`. iPhone install matching is in beta.
+   the app: `onLink` fires with `kind: deferred`, `route: install_referrer`. iPhone install matching is in beta: the customer picks device matching and/or paste handoff in
+   Dashboard → Settings → iPhone installs (device matching is off by default for new workspaces).
 
 If links open the browser: a missing SHA-256 (most often the Play App Signing key from Play Console → App
 integrity), a typo in the host, or the app was installed before the files were right (reinstall). See
@@ -91,7 +92,8 @@ https://straitlink.in/docs/troubleshooting/.
   `shared-spec/scripts/rename-brand.sh` (all SDKs) or `node scripts/brand.mjs --write`.
 - Wire names are part of the contract: query params `strait_click` / `strait_link`, storage keys `strait.*`,
   headers `X-Strait-*`. Don't rename them.
-- Brand: Strait (never "Straight"). Don't write superlatives ("best", "cheapest") or speed / match-rate numbers in
+- Brand: Strait (the company name is never spelt "Straight"). "Straight" and "Stamped" name the two halves of
+  the product (the tap goes straight to the exact screen; every tap is recorded); the tagline is "Straight to the screen. On the record." Don't write superlatives ("best", "cheapest") or speed / match-rate numbers in
   docs or comments. iPhone install matching is in beta.
 
 ## More
