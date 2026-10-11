@@ -218,8 +218,25 @@ namespace Strait
         }
 
         /// <summary>
+        /// The deep link inside an old Firebase Dynamic Links long link (contract B22):
+        /// <c>https://&lt;x&gt;.page.link/?link=&lt;url&gt;&amp;…</c> → <c>&lt;url&gt;</c>. Only on a
+        /// <c>*.page.link</c> host, only at the root path, only when <c>link</c> is an absolute http(s)
+        /// URL with a host. Anything else → null (a page.link short link is resolved by the engine).
+        /// </summary>
+        public static string? PageLinkLongLink(SplitUrlResult p)
+        {
+            if (!p.Host.EndsWith(".page.link", StringComparison.Ordinal) || (p.Path != "/" && p.Path != "")) return null;
+            if (!p.Params.TryGetValue("link", out var link) || string.IsNullOrEmpty(link)) return null;
+            var inner = SplitUrl(link);
+            if (inner == null || (inner.Scheme != "https" && inner.Scheme != "http") || inner.Host.Length == 0) return null;
+            return JsTrim(link);
+        }
+
+        /// <summary>
         /// What a URL handed to the app means:
-        /// https on a Strait link host → short link (needs /v1/resolve);
+        /// https on a Strait link host → short link (needs /v1/resolve), except an FDL long link on a
+        /// <c>*.page.link</c> link host (B22): its <c>link=</c> value IS the destination, read on the
+        /// device with no network call;
         /// other https → it IS the destination;
         /// yourapp://host/path (browser hand-off) → destination https://host/path.
         /// A <c>strait_click</c> tap id is removed from the destination and returned apart.
@@ -235,7 +252,16 @@ namespace Strait
                 foreach (var h in linkHosts)
                 {
                     if (h != null && h.ToLowerInvariant() == p0.Host)
+                    {
+                        var longLink = PageLinkLongLink(p0);
+                        if (longLink != null)
+                        {
+                            var inner = ClassifyUrl(longLink, Array.Empty<string>());
+                            if (inner != null && !inner.NeedsResolve)
+                                return new ClassifiedUrl(LinkRoutes.AppLink, false, inner.Url, inner.Path, inner.Params, inner.ClickId);
+                        }
                         return new ClassifiedUrl(LinkRoutes.AppLink, true, null, null, null);
+                    }
                 }
             }
             var (clean, clickId) = TakeClickId(raw!);
