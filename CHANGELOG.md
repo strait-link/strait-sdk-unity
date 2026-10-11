@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.1
 
 - README: the common Strait SDK header (logo, the promise "Straight to the screen. On the record.",
   badges, links to docs, platform status and the changelog), a platform features table in the
