@@ -549,7 +549,8 @@ namespace Strait
 
         /// <summary>
         /// The deferred check. <paramref name="record"/> (the once-per-install run) sends the openId
-        /// so the engine records this first open + install exactly once; the debug re-check doesn't.
+        /// so the engine records this first open + install exactly once; the debug re-check sends
+        /// record:false instead, so the engine adds no install.
         /// </summary>
         private async Task<LinkEvent> RunDeferred(bool record)
         {
@@ -578,6 +579,7 @@ namespace Strait
                             Kv("platform", "android"),
                         };
                         if (record) { body.Add(Kv("openId", id)); body.Add(Kv("at", t0)); }
+                        else body.Add(Kv("record", false));
                         var res = await Answered("/v1/referrer", body);
                         if (IsTrue(res.Json, "matched"))
                         {
@@ -599,6 +601,7 @@ namespace Strait
                     };
                     AddDevice(fields);
                     if (record) { fields.Add(Kv("openId", id)); fields.Add(Kv("at", t0)); }
+                    else fields.Add(Kv("record", false)); // read only: the engine adds no install, open or webhook
                     var res = await Answered("/v1/match", fields);
                     // The workspace's live iPhone choice (Dashboard Settings → iPhone installs). Read from this
                     // reply only, never stored, so the next check asks the engine again. Missing (older engine) = off.

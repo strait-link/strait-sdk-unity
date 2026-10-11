@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.2
+
+- `checkDeferred()` (the debug / settings re-check) now sends `"record": false` on `/v1/match` and `/v1/referrer`, so the
+  engine answers the match without adding an install, an open or an `install.matched` webhook
+  (contract B6: it never adds an install). The once-per-install check is unchanged. Takes effect
+  once the engine with `record` support is live; an older engine ignores the field.
+
 ## 0.8.1
 
 - README: the common Strait SDK header (logo, the promise "Straight to the screen. On the record.",

@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.8.1**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.8.2**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -65,7 +65,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.1
+https://github.com/bazingga08/strait-sdk-unity.git?path=src#v0.8.2
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.

@@ -369,7 +369,21 @@ namespace Strait.Tests
             await h.Strait.Start(null);
             await h.Strait.CheckDeferred();
             var call = Assert.Single(engine.Of("/v1/match"));
-            AssertBody(call.Body, ("openId", null), ("at", null));
+            AssertBody(call.Body, ("openId", null), ("at", null), ("record", false));
+        }
+
+        [Fact]
+        public async Task DebugRecheck_SendsRecordFalseOnReferrer_FirstLaunchNever()
+        {
+            var engine = new FakeEngine(("/v1/referrer", Ok(
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/p/42\",\"linkId\":\"lnk_42\"}")));
+            var h = Make(engine, referrer: "strait_link=lnk_42");
+            await h.Strait.Start(null);
+            await h.Strait.CheckDeferred();
+            var calls = engine.Of("/v1/referrer");
+            Assert.Equal(2, calls.Count);
+            AssertBody(calls[0].Body, ("record", null), ("openId", h.Events[0].Id));
+            AssertBody(calls[1].Body, ("record", false), ("openId", null));
         }
 
         private sealed class BrokenStore : IKeyValueStore
