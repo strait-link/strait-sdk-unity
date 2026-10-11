@@ -31,8 +31,8 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.8.1**. It is at parity with the React Native reference SDK
-(the Strait SDK contract).
+Version **0.8.1**. It follows the Strait SDK contract like the React Native reference SDK,
+except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
 `dotnet test` in CI checks it against the shared golden vectors
@@ -78,8 +78,10 @@ namespace `Strait`. Package Manager → this package → *Samples* → **Quick s
 ready-made `StraitBootstrap` MonoBehaviour.
 
 Without Package Manager: copy `src/*.cs` into your project (for example
-`Assets/Strait/`), or build `src/Strait.Signature.csproj` and drop the DLL into
-`Assets/Plugins/`.
+`Assets/Strait/`), plus `src/Plugins/iOS/StraitClipboard.mm` for paste handoff, or
+build `src/Strait.Signature.csproj` and drop the DLL into `Assets/Plugins/`. A DLL built
+outside Unity has no iOS clipboard (`IosStraitClipboard.Default` is null there), so for
+paste handoff pass your own `Clipboard`.
 
 **Publishable key:** Dashboard → Get started → Publishable key (`st_pub_live_…`). It is
 safe to put in your app. Never put your secret key (`st_live_…`) in an app.
@@ -159,7 +161,7 @@ public class StraitLinks : MonoBehaviour
             // Transport = new UnityWebRequestTransport(),   // required on WebGL (no HttpClient there)
         });
 
-        Client.OnLinkStart += s => ShowSpinner();       // the link can take 1–6 s to resolve
+        Client.OnLinkStart += s => ShowSpinner();       // resolving can take a few seconds on a slow network
         Client.OnLink += e =>                           // past events are replayed to you
         {
             HideSpinner();
@@ -310,7 +312,8 @@ combination works:
 | on | on | Device matching first; paste handoff only when it finds nothing. |
 
 - **Device matching** matches the first open to the tap with a few short-lived signals
-  (IP kept only as a keyed hash, screen, language, time zone, iOS version), kept for one
+  (IP kept only as a keyed hash plus its /24 or /48 network prefix, screen, language, time
+  zone, iOS version), kept for one
   hour and used only to open the right screen in your game. It is routing, not tracking:
   no advertising, no sharing, no linking across apps. **Apple policy note:** Apple's
   rules say fingerprinting is not allowed, whether or not the user allows tracking. Read
@@ -319,7 +322,8 @@ combination works:
   label section).
 - **Paste handoff** makes the tap page's "Get the app" button copy a short-lived,
   single-use Strait link. On first launch the SDK asks iOS, without a prompt, whether the
-  clipboard probably holds a web link (`UIPasteboard detectPatterns`, iOS 15+); only then
+  clipboard probably holds a web link (`UIPasteboard detectPatterns`, iOS 15+; on older iOS
+  the clipboard is never read); only then
   does it read it, and **iOS shows its "Allow Paste" prompt** to the player. A Strait
   handoff link is claimed with `POST /v1/handoff/claim` for an exact match
   (`LinkEvent.Route` = `"clipboard"`); anything else is ignored on the device.
@@ -433,7 +437,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
   `TrackEvent(name, value, currency, linkId, clickId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
-  These are the same fields and wire values as the React Native SDK.
+  These are the React Native SDK's fields and wire values, minus `referralCode`.
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is
   wrapped with `unchecked` to match JS's 32-bit `|0`.
 
