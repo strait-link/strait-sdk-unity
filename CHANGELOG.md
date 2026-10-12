@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.3
 
 - Quick start sample (SDK-24): `StraitBootstrap` now passes `DeviceFields = StraitDevice.Collect`, and the
   sample ships the README's `StraitDevice.cs` (Android via `AndroidJavaClass`, iOS via `StraitDevice.mm`).
