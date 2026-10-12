@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Quick start sample (SDK-24): `StraitBootstrap` now passes `DeviceFields = StraitDevice.Collect`, and the
+  sample ships the README's `StraitDevice.cs` (Android via `AndroidJavaClass`, iOS via `StraitDevice.mm`).
+  Before, it sent no device fields, so `/v1/match` answered 400 and a game built from the sample never
+  got its deferred link. Editor / desktop still send none. No SDK code change.
+
 ## 0.8.2
 
 - `checkDeferred()` (the debug / settings re-check) now sends `"record": false` on `/v1/match` and `/v1/referrer`, so the

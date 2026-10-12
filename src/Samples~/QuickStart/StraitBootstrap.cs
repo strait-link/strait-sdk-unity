@@ -1,7 +1,7 @@
 // Quick start: add this component to a GameObject in your first scene.
 // It creates one client for the game's lifetime and routes every link.
-// For an exact deferred match, also supply DeviceFields and (Android) the Play
-// Install Referrer — see "Device fields" and "Play Install Referrer" in the README.
+// Device fields come from StraitDevice.cs / StraitDevice.mm (the README's "Device fields" code);
+// /v1/match needs them. On Android, also supply the Play Install Referrer: see the README.
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Strait;
@@ -26,6 +26,7 @@ public class StraitBootstrap : MonoBehaviour
             Storage = new PlayerPrefsStore(),
             Platform = Application.platform == RuntimePlatform.Android ? "android"
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
+            DeviceFields = StraitDevice.Collect,        // without them /v1/match answers 400 and the install is never matched
         });
 
         Client.OnLink += e =>                           // past events are replayed to late subscribers

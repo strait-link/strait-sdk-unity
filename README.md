@@ -75,7 +75,8 @@ The OpenUPM listing is still pending; the git URL above works today.
 
 The package (folder `src/`) compiles into the `Strait.Sdk` assembly; everything is in
 namespace `Strait`. Package Manager → this package → *Samples* → **Quick start** imports a
-ready-made `StraitBootstrap` MonoBehaviour.
+ready-made `StraitBootstrap` MonoBehaviour, with the device fields below already wired
+(`StraitDevice.cs` + `StraitDevice.mm`; don't add a second copy of either).
 
 Without Package Manager: copy `src/*.cs` into your project (for example
 `Assets/Strait/`), plus `src/Plugins/iOS/StraitClipboard.mm` for paste handoff, or
@@ -227,6 +228,8 @@ public sealed class PlayerPrefsStore : IKeyValueStore
 The values must match what the browser saw when the user tapped the link: CSS
 `screen.width` (portrait, rounded like Chrome), `devicePixelRatio`, the locale and the IANA
 time zone. Do not use `Screen.width`, which follows Unity's render scaling and orientation.
+Without them `/v1/match` answers 400 and the install is never matched. Pass the collector
+as `DeviceFields = StraitDevice.Collect` (the Quick start sample does).
 
 ```csharp
 public static class StraitDevice
