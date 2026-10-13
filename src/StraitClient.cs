@@ -559,7 +559,10 @@ namespace Strait
         {
             long t0 = Now();
             var id = StraitCore.NewOpenId(t0);
-            Announce(new LinkStart { Id = id, Kind = "deferred", AppState = LinkAppStates.Closed, At = t0 });
+            // B6: once a link is here, no start signal: its event may not follow (see below),
+            // and a loading state would never end.
+            if (!(record && _directArrived))
+                Announce(new LinkStart { Id = id, Kind = "deferred", AppState = LinkAppStates.Closed, At = t0 });
             var ev = new LinkEvent { Id = id, Kind = "deferred", Route = LinkRoutes.Fingerprint, AppState = LinkAppStates.Closed, At = t0 };
             bool pasteHandoff = false;
             try
@@ -649,7 +652,7 @@ namespace Strait
                 }
             }
             ev.Ms = Now() - t0;
-            // B6: a link that arrived while this once-per-install check ran is what the
+            // B6: a link that arrived before or while this once-per-install check ran is what the
             // person wants now. The check's "no link" answer (no_match or network) is
             // returned but not delivered: it would pull the app off that link's screen.
             if (record && _directArrived && !ev.Matched) return ev;

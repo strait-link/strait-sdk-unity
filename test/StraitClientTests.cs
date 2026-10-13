@@ -523,6 +523,21 @@ namespace Strait.Tests
         }
 
         [Fact]
+        public async Task LinkBeforeFirstLaunchCheck_LeavesNoLoadingStateOpen()
+        {
+            var engine = new FakeEngine(Routes(("/v1/match", "{\"matched\":false}")));
+            var h = Make(engine);
+            var opening = false; // the documented pattern: spinner on at any start, off at any event
+            h.Strait.OnLinkStart += _ => opening = true;
+            h.Strait.OnLink += _ => opening = false;
+            await h.Strait.HandleUrl("straitlink://shop.example/product/42");
+            await h.Strait.Start(null);
+            Assert.Single(engine.Calls, c => c.Path == "/v1/match"); // the install is still counted
+            Assert.Equal(new[] { "direct" }, h.Events.Select(e => e.Kind).ToArray());
+            Assert.False(opening);
+        }
+
+        [Fact]
         public async Task EmptyInitialUrl_TreatedAsNoLaunchLink()
         {
             var h = Make(new FakeEngine(ReferrerHit()), referrer: "strait_link=lnk_7");

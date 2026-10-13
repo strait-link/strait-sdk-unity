@@ -8,7 +8,8 @@
   check's `false` came right after it, so a game that routes home on `!Matched` left the right
   screen. Unity had the same race (the quick-start sample wires `deepLinkActivated` before
   `Start`). The check still runs and counts the install, and is marked done (or retried next
-  launch) as before; only its no-link event is not delivered. A deferred match is still
+  launch) as before; only its no-link event is not delivered, and it raises no
+  `OnLinkStart` once a link is here (a loading state would never end). A deferred match is still
   delivered; `CheckDeferred()` is unchanged (contract B6).
 
 ## 0.8.3
