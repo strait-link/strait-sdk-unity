@@ -31,6 +31,8 @@ namespace Strait.Tests
             private readonly Dictionary<string, string> _routes;
             public readonly List<Call> Calls = new List<Call>();
             public bool Offline;
+            /// <summary>When set, /v1/match waits for it and answers with this status (body from routes).</summary>
+            public TaskCompletionSource<int>? HoldMatch;
 
             public FakeEngine(Dictionary<string, string>? routes = null) { _routes = routes ?? new Dictionary<string, string>(); }
 
@@ -43,6 +45,8 @@ namespace Strait.Tests
                     Body = jsonBody == null ? (JsonElement?)null : JsonDocument.Parse(jsonBody).RootElement.Clone(),
                 });
                 if (Offline) throw new HttpRequestException("offline");
+                if (path == "/v1/match" && HoldMatch != null)
+                    return HoldMatch.Task.ContinueWith(t => (t.Result, _routes.TryGetValue(path, out var held) ? held : "{}"));
                 return Task.FromResult(_routes.TryGetValue(path, out var body) ? (200, body) : (404, ""));
             }
         }
@@ -483,6 +487,39 @@ namespace Strait.Tests
             await h.Strait.Start("straitlink://shop.example/cart");
             Assert.Equal(new[] { "direct" }, h.Events.Select(e => e.Kind).ToArray());
             Assert.Equal("1", await h.Storage.GetItemAsync("strait.deferredChecked"));
+        }
+
+        // Found with the React Native SDK on an Android emulator (13 Oct): the first-launch
+        // check's /v1/match was still waiting when a tapped link arrived; the link was
+        // delivered, then the check's "no link", and an app that routes home on !matched
+        // left the right screen (B6). The quick-start sample wires deepLinkActivated before
+        // Start, so a link during the check takes the same path.
+        [Fact]
+        public async Task LinkDuringFirstLaunchCheck_IsNotFollowedByNoMatch()
+        {
+            var engine = new FakeEngine(Routes(("/v1/match", "{\"matched\":false}"))) { HoldMatch = new TaskCompletionSource<int>() };
+            var h = Make(engine);
+            var started = h.Strait.Start(null);
+            Assert.Single(engine.Calls, c => c.Path == "/v1/match");
+            await h.Strait.HandleUrl("straitlink://shop.example/product/42");
+            engine.HoldMatch.SetResult(200);
+            await started;
+            Assert.Equal(new[] { "direct" }, h.Events.Select(e => e.Kind).ToArray());
+            Assert.Equal("/product/42", h.Events[0].Path);
+            Assert.Equal("1", await h.Storage.GetItemAsync(StraitClient.DeferredFlag)); // the engine answered
+        }
+
+        [Fact]
+        public async Task LinkDuringFirstLaunchCheck_NetworkAnswerIsQuiet_AndRetriedNextLaunch()
+        {
+            var engine = new FakeEngine() { HoldMatch = new TaskCompletionSource<int>() };
+            var h = Make(engine);
+            var started = h.Strait.Start(null);
+            await h.Strait.HandleUrl("straitlink://shop.example/product/42");
+            engine.HoldMatch.SetResult(503);
+            await started;
+            Assert.Equal(new[] { "direct" }, h.Events.Select(e => e.Kind).ToArray());
+            Assert.Null(await h.Storage.GetItemAsync(StraitClient.DeferredFlag));
         }
 
         [Fact]

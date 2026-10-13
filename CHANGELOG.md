@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.4
+
+- Fix: a link that opens the game while the first-launch deferred check is still running is no
+  longer followed by that check's "no link" event (`Matched = false`, `no_match` or `network`).
+  Found with the React Native SDK on an Android emulator (13 Oct): the link was delivered and the
+  check's `false` came right after it, so a game that routes home on `!Matched` left the right
+  screen. Unity had the same race (the quick-start sample wires `deepLinkActivated` before
+  `Start`). The check still runs and counts the install, and is marked done (or retried next
+  launch) as before; only its no-link event is not delivered. A deferred match is still
+  delivered; `CheckDeferred()` is unchanged (contract B6).
+
 ## 0.8.3
 
 - Quick start sample (SDK-24): `StraitBootstrap` now passes `DeviceFields = StraitDevice.Collect`, and the

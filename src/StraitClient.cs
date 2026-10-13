@@ -193,6 +193,8 @@ namespace Strait
         private Task _tapWrite = Task.CompletedTask;
         private readonly object _tapGate = new object();
         private bool _started;
+        /// <summary>A direct link arrived in this launch (B6: the check's "no link" then stays quiet).</summary>
+        private volatile bool _directArrived;
         private volatile bool _stopped;
 
         public StraitClient(StraitConfig config)
@@ -472,6 +474,7 @@ namespace Strait
 
         private async Task<LinkEvent> HandleUrlInternal(string raw, string appState, bool firstLaunch = false)
         {
+            _directArrived = true;
             long t0 = Now();
             var id = StraitCore.NewOpenId(t0);
             var platform = _config.Platform;
@@ -646,6 +649,10 @@ namespace Strait
                 }
             }
             ev.Ms = Now() - t0;
+            // B6: a link that arrived while this once-per-install check ran is what the
+            // person wants now. The check's "no link" answer (no_match or network) is
+            // returned but not delivered: it would pull the app off that link's screen.
+            if (record && _directArrived && !ev.Matched) return ev;
             return Emit(ev);
         }
 
