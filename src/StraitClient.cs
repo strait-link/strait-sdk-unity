@@ -193,7 +193,7 @@ namespace Strait
         private Task _tapWrite = Task.CompletedTask;
         private readonly object _tapGate = new object();
         private bool _started;
-        /// <summary>A direct link arrived in this launch (B6: the check's "no link" then stays quiet).</summary>
+        /// <summary>A direct link arrived in this launch (B6: the first-launch check then stays quiet).</summary>
         private volatile bool _directArrived;
         private volatile bool _stopped;
 
@@ -559,9 +559,10 @@ namespace Strait
         {
             long t0 = Now();
             var id = StraitCore.NewOpenId(t0);
-            // B6: once a link is here, no start signal: its event may not follow (see below),
+            bool Quiet() => record && _directArrived;
+            // B6: once a link is here, no start signal: its event will not follow (see below),
             // and a loading state would never end.
-            if (!(record && _directArrived))
+            if (!Quiet())
                 Announce(new LinkStart { Id = id, Kind = "deferred", AppState = LinkAppStates.Closed, At = t0 });
             var ev = new LinkEvent { Id = id, Kind = "deferred", Route = LinkRoutes.Fingerprint, AppState = LinkAppStates.Closed, At = t0 };
             bool pasteHandoff = false;
@@ -630,10 +631,11 @@ namespace Strait
             // B19: device matching first; the clipboard only when the engine answered without a match and said
             // the workspace has Paste handoff on, once per install, on iOS. No answer (reason "network") = the
             // choice is unknown, so the clipboard stays untouched and the check runs again next launch.
-            // Same openId as the match, so the install is counted once.
-            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios")
+            // Same openId as the match, so the install is counted once. Not once a link is here: the result
+            // won't be delivered, so the read would show iOS's paste prompt for nothing (B6).
+            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios" && !Quiet())
             {
-                var token = await HandoffTokenFromClipboard();
+                var token = await HandoffTokenFromClipboard(Quiet);
                 if (token != null)
                 {
                     try
@@ -653,23 +655,25 @@ namespace Strait
             }
             ev.Ms = Now() - t0;
             // B6: a link that arrived before or while this once-per-install check ran is what the
-            // person wants now. The check's "no link" answer (no_match or network) is
-            // returned but not delivered: it would pull the app off that link's screen.
-            if (record && _directArrived && !ev.Matched) return ev;
+            // person wants now. The check's answer (a match, no_match or network) is returned but
+            // not delivered: it would pull the app off that link's screen to a stale pre-install
+            // destination. The engine has still counted (and attributed) the install.
+            if (Quiet()) return ev;
             return Emit(ev);
         }
 
         /// <summary>
         /// B19: detect (no prompt) whether the clipboard holds a web URL; only then read it (iOS shows the paste
         /// prompt) and keep a Strait handoff token. Null otherwise; clipboard failures never throw.
+        /// <paramref name="skip"/> true after the detect (a link arrived meanwhile) = no read, no prompt.
         /// </summary>
-        private async Task<string?> HandoffTokenFromClipboard()
+        private async Task<string?> HandoffTokenFromClipboard(Func<bool> skip)
         {
             var clipboard = _config.Clipboard ?? IosStraitClipboard.Default;
             if (clipboard == null) return null;
             try
             {
-                if (!await clipboard.HasProbableWebUrlAsync()) return null;
+                if (!await clipboard.HasProbableWebUrlAsync() || skip()) return null;
                 return StraitCore.ParseHandoffUrl(await clipboard.ReadTextAsync(), _linkHosts);
             }
             catch { return null; }

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.5
+
+- Fix: a link that opens the game while the first-launch deferred check is still running is no
+  longer followed by that check's *match* either (0.8.4 held back only its "no link" event). The
+  game stays on the screen the player just tapped instead of jumping to a stale pre-install
+  destination. The engine still counts the install and records and attributes the match as before,
+  the check is still marked done, and the match is not replayed to late `OnLink` subscribers.
+  `CheckDeferred()` still returns (and raises) its answer (contract B6).
+- iPhone paste handoff: once a link has opened the game in this launch, the first-launch check no
+  longer reads the clipboard, so iOS shows no "Allow Paste" prompt for an answer that won't be
+  delivered. Checked again right after the prompt-free URL detect; a clipboard already read is
+  claimed as before (contract B6/B19).
+- Known gap (no API change): if the check had already raised `OnLinkStart` when the link arrived,
+  no `OnLink` event with that start's `Id` follows. The documented pattern (loading on at any
+  `OnLinkStart`, off at any `OnLink`) stays correct because the link's own start and event come
+  after it; a game that tracks loading per `Id` should also clear pending deferred ids when a
+  `direct` event arrives.
+
 ## 0.8.4
 
 - Fix: a link that opens the game while the first-launch deferred check is still running is no

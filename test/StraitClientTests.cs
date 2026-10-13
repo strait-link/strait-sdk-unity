@@ -509,6 +509,38 @@ namespace Strait.Tests
             Assert.Equal("1", await h.Storage.GetItemAsync(StraitClient.DeferredFlag)); // the engine answered
         }
 
+        // 13 Oct follow-up: a late deferred *match* would jump from the screen the person just
+        // tapped to a stale pre-install destination.
+        [Fact]
+        public async Task LinkDuringFirstLaunchCheck_IsNotFollowedByLateMatch()
+        {
+            var engine = new FakeEngine(Routes(("/v1/match",
+                "{\"matched\":true,\"longUrl\":\"https://shop.example/promo/7\",\"linkId\":\"lnk_7\",\"clickId\":\"c-7\"}"))) { HoldMatch = new TaskCompletionSource<int>() };
+            var h = Make(engine);
+            var opening = false;
+            h.Strait.OnLinkStart += _ => opening = true;
+            h.Strait.OnLink += _ => opening = false;
+            var started = h.Strait.Start(null);
+            await h.Strait.HandleUrl("straitlink://shop.example/product/42");
+            engine.HoldMatch.SetResult(200);
+            await started;
+            Assert.Equal(new[] { "direct" }, h.Events.Select(e => e.Kind).ToArray());
+            Assert.Equal("/product/42", h.Events[0].Path);
+            Assert.False(opening);
+            // The engine got this install's openId: it records and attributes the match as before.
+            var match = engine.Calls.Single(c => c.Path == "/v1/match").Body!.Value;
+            Assert.True(match.TryGetProperty("openId", out _));
+            Assert.False(match.TryGetProperty("record", out _));
+            Assert.Equal("1", await h.Storage.GetItemAsync(StraitClient.DeferredFlag));
+            var late = new List<LinkEvent>();
+            h.Strait.OnLink += late.Add; // replays past events
+            Assert.Equal(new[] { "direct" }, late.Select(e => e.Kind).ToArray());
+            engine.HoldMatch = null;
+            var again = await h.Strait.CheckDeferred(); // an explicit check still answers
+            Assert.True(again.Matched);
+            Assert.Equal("/promo/7", again.Path);
+        }
+
         [Fact]
         public async Task LinkDuringFirstLaunchCheck_NetworkAnswerIsQuiet_AndRetriedNextLaunch()
         {

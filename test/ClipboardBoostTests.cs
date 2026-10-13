@@ -28,11 +28,14 @@ namespace Strait.Tests
             public string? Text;
             public bool Throws;
             public int Detects, Reads;
+            /// <summary>Runs inside the detect, before it answers (a link arriving meanwhile).</summary>
+            public Func<Task>? DuringDetect;
             public Task<bool> HasProbableWebUrlAsync()
             {
                 Detects++;
                 if (Throws) throw new InvalidOperationException("boom");
-                return Task.FromResult(Probable);
+                if (DuringDetect == null) return Task.FromResult(Probable);
+                return DuringDetect().ContinueWith(_ => Probable, TaskContinuationOptions.ExecuteSynchronously);
             }
             public Task<string?> ReadTextAsync()
             {
@@ -47,12 +50,17 @@ namespace Strait.Tests
             public readonly Dictionary<string, (int, string)> Routes = new Dictionary<string, (int, string)>();
             public readonly List<(string Path, JsonElement? Body)> Calls = new List<(string, JsonElement?)>();
             public bool Offline;
+            /// <summary>Paths whose reply waits until the source is completed (a request held open).</summary>
+            public readonly Dictionary<string, TaskCompletionSource<bool>> Holds = new Dictionary<string, TaskCompletionSource<bool>>();
             public Task<(int Status, string Body)> SendAsync(string method, string url, string? jsonBody)
             {
                 var path = new Uri(url).AbsolutePath;
                 Calls.Add((path, jsonBody == null ? (JsonElement?)null : JsonDocument.Parse(jsonBody).RootElement.Clone()));
                 if (Offline) throw new HttpRequestException("offline");
-                return Task.FromResult(Routes.TryGetValue(path, out var r) ? r : (404, ""));
+                var reply = Routes.TryGetValue(path, out var r) ? r : (404, "");
+                return Holds.TryGetValue(path, out var hold)
+                    ? hold.Task.ContinueWith(_ => reply, TaskContinuationOptions.ExecuteSynchronously)
+                    : Task.FromResult(reply);
             }
             public List<string> Paths => Calls.Select(c => c.Path).ToList();
         }
@@ -99,6 +107,65 @@ namespace Strait.Tests
             Assert.NotNull(prop);
             var boost = typeof(StraitConfig).GetProperty("ClipboardBoost")!;
             Assert.NotNull(boost.GetCustomAttributes(typeof(ObsoleteAttribute), false).SingleOrDefault());
+        }
+
+        // ---------------------------------------------------------------- a link during the first-launch check
+        // B6 + B19 (13 Oct follow-up): once a link has opened the app in this launch, the first-launch
+        // check's answer won't be delivered, so reading the clipboard would show iOS's paste prompt for nothing.
+
+        private const string DirectLink = "https://shop.example/product/42";
+
+        /// <summary>Paths minus the link's own open report.</summary>
+        private static string[] DeferredPaths(Engine e) => e.Paths.Where(p => p != "/v1/open").ToArray();
+
+        [Fact]
+        public async Task LinkBeforeTheClipboardStep_ClipboardNeverTouched()
+        {
+            var clip = new SpyClipboard { Text = Handoff };
+            var engine = MatchMiss();
+            engine.Routes["/v1/handoff/claim"] = (200, ClaimOk);
+            var hold = engine.Holds["/v1/match"] = new TaskCompletionSource<bool>();
+            var (s, storage, events) = Make(engine, clip);
+            var started = s.Start(null);
+            await s.HandleUrl(DirectLink);
+            hold.SetResult(true);
+            await started;
+            Assert.Equal(0, clip.Total); // no detect, no read, no paste prompt
+            Assert.Equal(new[] { "/v1/match" }, DeferredPaths(engine));
+            Assert.Equal(new[] { "direct" }, events.Select(e => e.Kind).ToArray());
+            Assert.Equal("1", await storage.GetItemAsync(StraitClient.DeferredFlag));
+        }
+
+        [Fact]
+        public async Task LinkDuringTheDetect_ClipboardNotRead()
+        {
+            var clip = new SpyClipboard { Text = Handoff };
+            var engine = MatchMiss();
+            engine.Routes["/v1/handoff/claim"] = (200, ClaimOk);
+            var (s, _, events) = Make(engine, clip);
+            clip.DuringDetect = () => s.HandleUrl(DirectLink);
+            await s.Start(null);
+            Assert.Equal((1, 0), (clip.Detects, clip.Reads));
+            Assert.Equal(new[] { "/v1/match" }, DeferredPaths(engine));
+            Assert.Equal(new[] { "direct" }, events.Select(e => e.Kind).ToArray());
+        }
+
+        [Fact]
+        public async Task LinkAfterTheRead_ClaimsAsBefore_ButDeliversNothing()
+        {
+            var clip = new SpyClipboard { Text = Handoff };
+            var engine = MatchMiss();
+            engine.Routes["/v1/handoff/claim"] = (200, ClaimOk);
+            var hold = engine.Holds["/v1/handoff/claim"] = new TaskCompletionSource<bool>();
+            var (s, storage, events) = Make(engine, clip);
+            var started = s.Start(null);
+            Assert.Equal(1, clip.Reads);
+            await s.HandleUrl(DirectLink);
+            hold.SetResult(true);
+            await started;
+            Assert.Equal(new[] { "/v1/match", "/v1/handoff/claim" }, DeferredPaths(engine));
+            Assert.Equal(new[] { "direct" }, events.Select(e => e.Kind).ToArray());
+            Assert.Equal("1", await storage.GetItemAsync(StraitClient.DeferredFlag));
         }
 
         // ---------------------------------------------------------------- the four Dashboard combinations
