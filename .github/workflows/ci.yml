@@ -14,5 +14,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - run: dotnet test test/Strait.Signature.Tests.csproj
+      - run: node scripts/spec-vectors.mjs
       - run: node scripts/unity-meta.mjs
       - run: node scripts/brand.mjs
