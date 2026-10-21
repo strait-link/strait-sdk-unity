@@ -94,7 +94,7 @@ https://straitlink.in/docs/troubleshooting/.
   headers `X-Strait-*`. Don't rename them.
 - Brand: Strait (the company name is never spelt "Straight"). "Straight" and "Stamped" name the two halves of
   the product (the tap goes straight to the exact screen; every tap is recorded); the tagline is "Straight to the screen. On the record." Don't write superlatives ("best", "cheapest") or speed / match-rate numbers in
-  docs or comments. iPhone links are live; iPhone install matching is opt-in and an Estimated match.
+  docs or comments. iPhone links are live (proven on a real iPhone with the Swift reference app; this SDK's iOS glue is unit-tested and hasn't run on a real iPhone); iPhone install matching is opt-in and an Estimated match.
 
 ## More
 

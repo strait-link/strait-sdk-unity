@@ -50,7 +50,7 @@ built-in writer and parser (`StraitJson`).
 | Feature | Status | Notes |
 |---|---|---|
 | Android: direct links and deferred links | ● Live |  |
-| iPhone: Universal Links | ● Live | Tested on a real iPhone (iOS 26), 21 Oct 2026, with the Swift reference app: app open, in the background and closed. The Unity glue itself is beta (row below). |
+| iPhone links (Universal Links) | ● Live | The links themselves (Apple's Universal Links plus our association file) were proven on a real iPhone with the Swift reference app on 21 Oct 2026. This SDK's iOS glue is covered by unit tests and hasn't run on a real iPhone. The Unity glue itself is beta (row below). |
 | iPhone: install matching (deferred links) | Opt-in | Off until you choose it. Proven on iPhone simulators; the real-iPhone run waits on our App Store listing. Your choice in Dashboard → Settings → iPhone installs: device matching, paste handoff, both or neither, read from Strait at runtime. Device matching is off by default. iPhone matches are labelled Estimated until measured. |
 | Unity glue (MonoBehaviour, PlayerPrefs, plugins) | ◐ Beta | Not yet run in the Unity editor or on a device. |
 | C# library (`netstandard2.1`) | ◐ Beta | CI-checked with `dotnet test` against the shared vectors. |
