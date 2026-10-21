@@ -13,9 +13,9 @@
     "app-links"
   ],
   "license": "MIT",
-  "documentationUrl": "https://github.com/bazingga08/strait-sdk-unity#readme",
-  "changelogUrl": "https://github.com/bazingga08/strait-sdk-unity/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/bazingga08/strait-sdk-unity/blob/main/LICENSE",
+  "documentationUrl": "https://github.com/strait-link/strait-sdk-unity#readme",
+  "changelogUrl": "https://github.com/strait-link/strait-sdk-unity/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/strait-link/strait-sdk-unity/blob/main/LICENSE",
   "author": {
     "name": "The Strait authors",
     "url": "https://straitlink.in"
