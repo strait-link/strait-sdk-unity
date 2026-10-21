@@ -75,7 +75,7 @@ adb shell pm get-app-links <package.name>
 3. Tap a link from WhatsApp or Gmail on a real phone: the app opens on the right screen and `OnLink` fires
    with `e.Matched == true`. The tap and the open appear in Dashboard → Analytics.
 4. Deferred (Android): install from a Google Play internal-testing build, tap the link before installing, open
-   the app: `OnLink` fires with `e.Kind == "deferred"`, `e.Route == "install_referrer"`. iPhone install matching is in beta: the customer picks device matching and/or paste handoff in
+   the app: `OnLink` fires with `e.Kind == "deferred"`, `e.Route == "install_referrer"`. iPhone links are live; iPhone install matching is opt-in and an Estimated match: the customer picks device matching and/or paste handoff in
    Dashboard → Settings → iPhone installs (device matching is off by default for new workspaces).
 
 If links open the browser: a missing SHA-256 (most often the Play App Signing key from Play Console → App
@@ -94,7 +94,7 @@ https://straitlink.in/docs/troubleshooting/.
   headers `X-Strait-*`. Don't rename them.
 - Brand: Strait (the company name is never spelt "Straight"). "Straight" and "Stamped" name the two halves of
   the product (the tap goes straight to the exact screen; every tap is recorded); the tagline is "Straight to the screen. On the record." Don't write superlatives ("best", "cheapest") or speed / match-rate numbers in
-  docs or comments. iPhone install matching is in beta.
+  docs or comments. iPhone links are live; iPhone install matching is opt-in and an Estimated match.
 
 ## More
 
