@@ -94,6 +94,30 @@ namespace Strait
             return BrowserScreenWidth(Math.Min(logicalWidth, logicalHeight));
         }
 
+        /// <summary>
+        /// The <c>deviceClass</c> sent with open reports (contract B14, engine ADR 0039), from the screen's
+        /// shorter side in dp / logical px: "tablet" from 600 (Android's sw600dp rule), else "phone"; null when
+        /// unknown (0, negative, NaN). On Android pass <c>Configuration.smallestScreenWidthDp</c>.
+        /// </summary>
+        public static string? DeviceClassForSize(double shortestSide)
+        {
+            if (double.IsNaN(shortestSide) || double.IsInfinity(shortestSide) || shortestSide <= 0) return null;
+            return shortestSide >= 600 ? "tablet" : "phone";
+        }
+
+        /// <summary>
+        /// The <c>deviceClass</c> on iOS from the hardware model (Unity <c>SystemInfo.deviceModel</c>, e.g.
+        /// "iPad13,4"): "iPad…" → "tablet", "iPhone…" / "iPod…" → "phone", anything else → null. The model names
+        /// the hardware, so an iPhone-only game on an iPad still says iPad.
+        /// </summary>
+        public static string? DeviceClassForModel(string? deviceModel)
+        {
+            if (deviceModel == null) return null;
+            if (deviceModel.StartsWith("iPad", StringComparison.Ordinal)) return "tablet";
+            if (deviceModel.StartsWith("iPhone", StringComparison.Ordinal) || deviceModel.StartsWith("iPod", StringComparison.Ordinal)) return "phone";
+            return null;
+        }
+
         // JS: /^([a-z][a-z0-9+.-]*):\/\/([^/?#]*)([^?#]*)(?:\?([^#]*))?/i
         // Explicit A-Z instead of IgnoreCase so .NET's Unicode case folding (e.g. KELVIN SIGN ~ k)
         // can't widen the match beyond what JS's /i accepts for ASCII.

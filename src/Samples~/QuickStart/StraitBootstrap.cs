@@ -27,6 +27,7 @@ public class StraitBootstrap : MonoBehaviour
             Platform = Application.platform == RuntimePlatform.Android ? "android"
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
             DeviceFields = StraitDevice.Collect,        // without them /v1/match answers 400 and the install is never matched
+            DeviceClass = StraitDevice.Class,           // phone / tablet on open reports (iPad taps)
         });
 
         Client.OnLink += e =>                           // past events are replayed to late subscribers
