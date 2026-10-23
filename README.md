@@ -16,7 +16,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 <p align="center">
   <a href="https://github.com/bazingga08/strait-sdk-unity/tags"><img alt="Latest version" src="https://img.shields.io/github/v/tag/bazingga08/strait-sdk-unity?sort=semver&label=version&style=flat-square&labelColor=0F0D0A&color=423B33"></a>
   <a href="https://straitlink.in/platform-status/"><img alt="SDK: Beta" src="https://img.shields.io/badge/SDK-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
-  <a href="https://straitlink.in/docs/iphone-install-matching/"><img alt="iPhone: Beta" src="https://img.shields.io/badge/iPhone-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
+  <a href="https://straitlink.in/iphone-status/"><img alt="iPhone: Live" src="https://img.shields.io/badge/iPhone-live-423B33?style=flat-square&labelColor=0F0D0A"></a>
   <a href="https://github.com/bazingga08/strait-sdk-unity/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/bazingga08/strait-sdk-unity/ci.yml?branch=main&label=CI&style=flat-square&labelColor=0F0D0A"></a>
   <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-423B33?style=flat-square&labelColor=0F0D0A"></a>
 </p>
@@ -50,12 +50,13 @@ built-in writer and parser (`StraitJson`).
 | Feature | Status | Notes |
 |---|---|---|
 | Android: direct links and deferred links | ● Live |  |
-| iPhone: Universal Links and install matching | ◐ Beta | Your choice in Dashboard → Settings → iPhone installs: device matching, paste handoff, both or neither, read from Strait at runtime. Device matching is off by default. iPhone matches are labelled Estimated until measured. |
+| iPhone links (Universal Links) | ● Live | The links themselves (Apple's Universal Links plus our association file) were proven on a real iPhone with the Swift reference app on 21 Oct 2026. This SDK's iOS glue is covered by unit tests and hasn't run on a real iPhone. The Unity glue itself is beta (row below). |
+| iPhone: install matching (deferred links) | Opt-in | Off until you choose it. Proven on iPhone simulators; the real-iPhone run waits on our App Store listing. Your choice in Dashboard → Settings → iPhone installs: device matching, paste handoff, both or neither, read from Strait at runtime. Device matching is off by default. iPhone matches are labelled Estimated until measured. |
 | Unity glue (MonoBehaviour, PlayerPrefs, plugins) | ◐ Beta | Not yet run in the Unity editor or on a device. |
 | C# library (`netstandard2.1`) | ◐ Beta | CI-checked with `dotnet test` against the shared vectors. |
 | OpenUPM | – Not yet | Add it from the git URL until it is listed. |
 
-● Live · ◐ Beta · ○ Planned · – Not yet. The same words as the [platform status](https://straitlink.in/platform-status/) page.
+● Live · ◐ Beta · ○ Planned · – Not yet · Opt-in: off until you switch it on. The same words as the [platform status](https://straitlink.in/platform-status/) page.
 
 ## Install
 
@@ -321,7 +322,7 @@ A page.link short link (`https://<x>.page.link/aBcD`) is then looked up like any
 People without your game still land on whatever Google serves. Tested in unit tests only, not yet on a real
 iPhone.
 
-### iPhone deferred links (beta): you choose the method (B19)
+### iPhone deferred links (opt-in): you choose the method (B19)
 
 On iPhone there is no install referrer. **You choose, in the Dashboard (Settings → iPhone
 installs), how Strait finds the link after an install.** There are two switches, and any
