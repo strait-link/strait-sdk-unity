@@ -16,7 +16,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 <p align="center">
   <a href="https://github.com/strait-link/strait-sdk-unity/tags"><img alt="Latest version" src="https://img.shields.io/github/v/tag/strait-link/strait-sdk-unity?sort=semver&label=version&style=flat-square&labelColor=0F0D0A&color=423B33"></a>
   <a href="https://straitlink.in/platform-status/"><img alt="SDK: Beta" src="https://img.shields.io/badge/SDK-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
-  <a href="https://straitlink.in/docs/iphone-install-matching/"><img alt="iPhone: Beta" src="https://img.shields.io/badge/iPhone-beta-423B33?style=flat-square&labelColor=0F0D0A"></a>
+  <a href="https://straitlink.in/iphone-status/"><img alt="iPhone: Live" src="https://img.shields.io/badge/iPhone-live-423B33?style=flat-square&labelColor=0F0D0A"></a>
   <a href="https://github.com/strait-link/strait-sdk-unity/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/strait-link/strait-sdk-unity/ci.yml?branch=main&label=CI&style=flat-square&labelColor=0F0D0A"></a>
   <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/badge/licence-MIT-423B33?style=flat-square&labelColor=0F0D0A"></a>
 </p>
@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.8.5**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.8.6**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -50,12 +50,13 @@ built-in writer and parser (`StraitJson`).
 | Feature | Status | Notes |
 |---|---|---|
 | Android: direct links and deferred links | ● Live |  |
-| iPhone: Universal Links and install matching | ◐ Beta | Your choice in Dashboard → Settings → iPhone installs: device matching, paste handoff, both or neither, read from Strait at runtime. Device matching is off by default. iPhone matches are labelled Estimated until measured. |
+| iPhone links (Universal Links) | ● Live | The links themselves (Apple's Universal Links plus our association file) were proven on a real iPhone with the Swift reference app on 21 Oct 2026. This SDK's iOS glue is covered by unit tests and hasn't run on a real iPhone. The Unity glue itself is beta (row below). |
+| iPhone: install matching (deferred links) | Opt-in | Off until you choose it. Proven on iPhone simulators; the real-iPhone run waits on our App Store listing. Your choice in Dashboard → Settings → iPhone installs: device matching, paste handoff, both or neither, read from Strait at runtime. Device matching is off by default. iPhone matches are labelled Estimated until measured. |
 | Unity glue (MonoBehaviour, PlayerPrefs, plugins) | ◐ Beta | Not yet run in the Unity editor or on a device. |
 | C# library (`netstandard2.1`) | ◐ Beta | CI-checked with `dotnet test` against the shared vectors. |
 | OpenUPM | – Not yet | Add it from the git URL until it is listed. |
 
-● Live · ◐ Beta · ○ Planned · – Not yet. The same words as the [platform status](https://straitlink.in/platform-status/) page.
+● Live · ◐ Beta · ○ Planned · – Not yet · Opt-in: off until you switch it on. The same words as the [platform status](https://straitlink.in/platform-status/) page.
 
 ## Install
 
@@ -65,7 +66,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.5
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.6
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -104,7 +105,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B11 | All JSON goes through an escaping writer | ✓ |
 | B12 | `SplitUrl` matches the vectors exactly (no `System.Uri`) | ✓ |
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
-| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()` | ✓ |
+| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
@@ -158,6 +159,7 @@ public class StraitLinks : MonoBehaviour
             Platform = Application.platform == RuntimePlatform.Android ? "android"
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
             DeviceFields = StraitDevice.Collect,
+            DeviceClass = StraitDevice.Class,          // phone / tablet on open reports (see Device fields)
             InstallReferrer = Application.platform == RuntimePlatform.Android ? PlayReferrer.Get : null,
             // Transport = new UnityWebRequestTransport(),   // required on WebGL (no HttpClient there)
         });
@@ -230,6 +232,9 @@ The values must match what the browser saw when the user tapped the link: CSS
 time zone. Do not use `Screen.width`, which follows Unity's render scaling and orientation.
 Without them `/v1/match` answers 400 and the install is never matched. Pass the collector
 as `DeviceFields = StraitDevice.Collect` (the Quick start sample does).
+`StraitDevice.Class` below gives `DeviceClass` (phone or tablet, sent with open reports):
+the hardware model on iOS (an iPad says "iPad…" even for an iPhone-only game) and the
+standard smallest-width rule on Android (600 dp or more = tablet).
 
 ```csharp
 public static class StraitDevice
@@ -261,6 +266,22 @@ public static class StraitDevice
         };
 #else
         return null;                            // editor / desktop: the match request omits device fields
+#endif
+    }
+
+    /// <summary>Phone or tablet for open reports (contract B14). iPad Safari sends a Mac user agent, so only the game can say iPad.</summary>
+    public static string? Class()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+        using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+        using var res = activity.Call<AndroidJavaObject>("getResources");
+        using var conf = res.Call<AndroidJavaObject>("getConfiguration");
+        return StraitCore.DeviceClassForSize(conf.Get<int>("smallestScreenWidthDp")); // >= 600 dp = tablet
+#elif UNITY_IOS && !UNITY_EDITOR
+        return StraitCore.DeviceClassForModel(SystemInfo.deviceModel);              // "iPad13,4" -> tablet
+#else
+        return null;                            // editor / desktop: not sent
 #endif
     }
 
@@ -301,7 +322,7 @@ A page.link short link (`https://<x>.page.link/aBcD`) is then looked up like any
 People without your game still land on whatever Google serves. Tested in unit tests only, not yet on a real
 iPhone.
 
-### iPhone deferred links (beta): you choose the method (B19)
+### iPhone deferred links (opt-in): you choose the method (B19)
 
 On iPhone there is no install referrer. **You choose, in the Dashboard (Settings → iPhone
 installs), how Strait finds the link after an install.** There are two switches, and any
@@ -431,7 +452,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 
 ## API summary
 
-- `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
+- `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `DeviceClassForSize`, `DeviceClassForModel`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
   `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
   (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).

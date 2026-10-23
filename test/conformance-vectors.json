@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -2038,6 +2038,60 @@
         "go.hilltop.example",
         "localhost:3000"
       ],
+      "expected": null
+    }
+  ],
+  "deviceClass": [
+    {
+      "shortestSide": 320,
+      "expected": "phone"
+    },
+    {
+      "shortestSide": 360,
+      "expected": "phone"
+    },
+    {
+      "shortestSide": 390,
+      "expected": "phone"
+    },
+    {
+      "shortestSide": 411.43,
+      "expected": "phone"
+    },
+    {
+      "shortestSide": 599,
+      "expected": "phone"
+    },
+    {
+      "shortestSide": 599.99,
+      "expected": "phone"
+    },
+    {
+      "shortestSide": 600,
+      "expected": "tablet"
+    },
+    {
+      "shortestSide": 600.5,
+      "expected": "tablet"
+    },
+    {
+      "shortestSide": 744,
+      "expected": "tablet"
+    },
+    {
+      "shortestSide": 800,
+      "expected": "tablet"
+    },
+    {
+      "shortestSide": 1024,
+      "expected": "tablet"
+    },
+    {
+      "shortestSide": 0,
+      "expected": null
+    },
+    {
+      "shortestSide": -1,
       "expected": null
     }
   ]

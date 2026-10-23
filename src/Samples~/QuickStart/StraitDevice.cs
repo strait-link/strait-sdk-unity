@@ -38,6 +38,22 @@ public static class StraitDevice
 #endif
     }
 
+    /// <summary>Phone or tablet for open reports (contract B14). iPad Safari sends a Mac user agent, so only the game can say iPad.</summary>
+    public static string? Class()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+        using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+        using var res = activity.Call<AndroidJavaObject>("getResources");
+        using var conf = res.Call<AndroidJavaObject>("getConfiguration");
+        return StraitCore.DeviceClassForSize(conf.Get<int>("smallestScreenWidthDp")); // >= 600 dp = tablet
+#elif UNITY_IOS && !UNITY_EDITOR
+        return StraitCore.DeviceClassForModel(SystemInfo.deviceModel);              // "iPad13,4" -> tablet
+#else
+        return null;                            // editor / desktop: not sent
+#endif
+    }
+
 #if UNITY_IOS && !UNITY_EDITOR
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern float _StraitScreenPortraitWidth();
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern float _StraitScreenScale();
