@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(8, v.GetProperty("version").GetInt32());
+            Assert.Equal(9, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -132,6 +132,17 @@ namespace Strait.Tests
             {
                 double logical = c.GetProperty("logical").GetDouble();
                 Assert.True(c.GetProperty("expected").GetInt32() == StraitCore.BrowserScreenWidth(logical), $"logical={logical:R}");
+            }
+        }
+
+        [Fact]
+        public void DeviceClassVectors()
+        {
+            foreach (var c in Vectors().GetProperty("deviceClass").EnumerateArray())
+            {
+                double side = c.GetProperty("shortestSide").GetDouble();
+                var exp = c.GetProperty("expected");
+                Assert.True((exp.ValueKind == JsonValueKind.Null ? null : exp.GetString()) == StraitCore.DeviceClassForSize(side), $"{side:R}");
             }
         }
 
