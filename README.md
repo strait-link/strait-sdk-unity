@@ -104,7 +104,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B11 | All JSON goes through an escaping writer | ✓ |
 | B12 | `SplitUrl` matches the vectors exactly (no `System.Uri`) | ✓ |
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
-| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()` | ✓ |
+| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
@@ -158,6 +158,7 @@ public class StraitLinks : MonoBehaviour
             Platform = Application.platform == RuntimePlatform.Android ? "android"
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
             DeviceFields = StraitDevice.Collect,
+            DeviceClass = StraitDevice.Class,          // phone / tablet on open reports (see Device fields)
             InstallReferrer = Application.platform == RuntimePlatform.Android ? PlayReferrer.Get : null,
             // Transport = new UnityWebRequestTransport(),   // required on WebGL (no HttpClient there)
         });
@@ -230,6 +231,9 @@ The values must match what the browser saw when the user tapped the link: CSS
 time zone. Do not use `Screen.width`, which follows Unity's render scaling and orientation.
 Without them `/v1/match` answers 400 and the install is never matched. Pass the collector
 as `DeviceFields = StraitDevice.Collect` (the Quick start sample does).
+`StraitDevice.Class` below gives `DeviceClass` (phone or tablet, sent with open reports):
+the hardware model on iOS (an iPad says "iPad…" even for an iPhone-only game) and the
+standard smallest-width rule on Android (600 dp or more = tablet).
 
 ```csharp
 public static class StraitDevice
@@ -261,6 +265,22 @@ public static class StraitDevice
         };
 #else
         return null;                            // editor / desktop: the match request omits device fields
+#endif
+    }
+
+    /// <summary>Phone or tablet for open reports (contract B14). iPad Safari sends a Mac user agent, so only the game can say iPad.</summary>
+    public static string? Class()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+        using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+        using var res = activity.Call<AndroidJavaObject>("getResources");
+        using var conf = res.Call<AndroidJavaObject>("getConfiguration");
+        return StraitCore.DeviceClassForSize(conf.Get<int>("smallestScreenWidthDp")); // >= 600 dp = tablet
+#elif UNITY_IOS && !UNITY_EDITOR
+        return StraitCore.DeviceClassForModel(SystemInfo.deviceModel);              // "iPad13,4" -> tablet
+#else
+        return null;                            // editor / desktop: not sent
 #endif
     }
 
@@ -431,7 +451,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 
 ## API summary
 
-- `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
+- `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `DeviceClassForSize`, `DeviceClassForModel`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
   `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
   (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).

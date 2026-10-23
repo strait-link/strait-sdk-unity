@@ -120,6 +120,14 @@ namespace Strait
         public IStraitTransport? Transport { get; set; }
         /// <summary>Clock in Unix ms. Default: system clock. (Tests inject a fake.)</summary>
         public Func<long>? Clock { get; set; }
+        /// <summary>
+        /// What the game runs on, sent as <c>deviceClass</c> with /v1/resolve and /v1/open (contract B14):
+        /// "phone" or "tablet"; anything else, null or a throw sends nothing. iPadOS Safari sends a Mac user agent,
+        /// so only the app can tell the engine it is an iPad. Default: none (the README's
+        /// <c>StraitDevice.Class</c> uses <see cref="StraitCore.DeviceClassForModel"/> on iOS and
+        /// <see cref="StraitCore.DeviceClassForSize"/> of <c>smallestScreenWidthDp</c> on Android).
+        /// </summary>
+        public Func<string?>? DeviceClass { get; set; }
     }
 
     /// <summary>One event type for every link case (B9). Wire-identical to the React Native SDK's LinkEvent.</summary>
@@ -506,6 +514,7 @@ namespace Strait
                             Kv("appState", appState),
                             Kv("firstLaunch", firstLaunch),
                             Kv("at", t0),
+                            Kv("deviceClass", DeviceClassValue()),
                         });
                         bool matched = IsTrue(res.Json, "matched");
                         ev.Matched = matched;
@@ -778,7 +787,8 @@ namespace Strait
             try
             {
                 var body = new List<KeyValuePair<string, object?>> { Kv("publishableKey", _config.PublishableKey) };
-                foreach (var kv in report) if (kv.Key != "publishableKey") body.Add(kv);
+                foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "deviceClass") body.Add(kv);
+                body.Add(Kv("deviceClass", DeviceClassValue())); // B14: added at send time, never queued
                 return (await Call("POST", "/v1/open", body)).Status;
             }
             catch { return null; }
@@ -890,6 +900,17 @@ namespace Strait
         }
 
         private static KeyValuePair<string, object?> Kv(string k, object? v) => new KeyValuePair<string, object?>(k, v);
+
+        /// <summary>"phone" or "tablet" from <see cref="StraitConfig.DeviceClass"/>, else null (left out of the JSON).</summary>
+        private string? DeviceClassValue()
+        {
+            try
+            {
+                var dc = _config.DeviceClass?.Invoke();
+                return dc == "phone" || dc == "tablet" ? dc : null;
+            }
+            catch { return null; }
+        }
 
         private static bool IsTrue(Dictionary<string, object?> j, string key) =>
             j.TryGetValue(key, out var v) && v is bool b && b;
