@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.8.6
 
 - New `StraitConfig.DeviceClass` (contract B14, engine ADR 0039): `"phone"` or `"tablet"` is sent with
   `/v1/resolve` and `/v1/open` (queued retries too). New `StraitCore.DeviceClassForSize` (>= 600 dp =
   tablet) and `StraitCore.DeviceClassForModel` (`SystemInfo.deviceModel` "iPad…" = tablet); the Quick
   start sample's `StraitDevice.Class` wires both. Left out when not supplied; older engines ignore it.
   Conformance vectors v9.
+- Docs: iPhone links are live and iPhone install matching is opt-in (off until you choose it) in
+  the README (no "beta" for iPhone). No behaviour change.
 
 ## 0.8.5
 
