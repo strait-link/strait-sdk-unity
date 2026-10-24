@@ -13,5 +13,6 @@
     <ProjectReference Include="../src/Strait.Signature.csproj" />
     <None Include="test-vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="conformance-vectors.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="doctor-vectors.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
