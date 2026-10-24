@@ -1,0 +1,1304 @@
+{
+  "contract": "B23",
+  "adr": "shared-spec docs/adr/0002-sdk-doctor.md",
+  "reference": "strait-sdk-react-native 0.9.3 src/doctor.ts",
+  "vectors": [
+    {
+      "name": "key.ok",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "key.secret st_live_",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_live_abc",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.secret",
+          "severity": "error",
+          "title": "This is a secret key, not the publishable key",
+          "fix": "Use the publishable key (st_pub_…) from Dashboard → Get started, and revoke this secret key in Dashboard → Settings → Secret keys: it has been inside your app."
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "key.secret st_test_",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_test_abc",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.secret",
+          "severity": "error",
+          "title": "This is a secret key, not the publishable key",
+          "fix": "Use the publishable key (st_pub_…) from Dashboard → Get started, and revoke this secret key in Dashboard → Settings → Secret keys: it has been inside your app."
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "key.invalid empty",
+      "input": {
+        "platform": "android",
+        "publishableKey": "",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.invalid",
+          "severity": "error",
+          "title": "Not a publishable key",
+          "fix": "Copy the publishable key (st_pub_…) from Dashboard → Get started."
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "key.invalid other",
+      "input": {
+        "platform": "android",
+        "publishableKey": "pk_live_abc",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.invalid",
+          "severity": "error",
+          "title": "Not a publishable key",
+          "fix": "Copy the publishable key (st_pub_…) from Dashboard → Get started."
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "endpoint.invalid http",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "http://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "endpoint.invalid",
+          "severity": "error",
+          "title": "The endpoint isn't an https link domain",
+          "fix": "Set endpoint to your link domain from Dashboard → Get started, e.g. https://<handle>.strait.link."
+        }
+      ]
+    },
+    {
+      "name": "endpoint.invalid empty",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": null
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "endpoint.invalid",
+          "severity": "error",
+          "title": "The endpoint isn't an https link domain",
+          "fix": "Set endpoint to your link domain from Dashboard → Get started, e.g. https://<handle>.strait.link."
+        }
+      ]
+    },
+    {
+      "name": "endpoint.invalid no host",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": null
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "endpoint.invalid",
+          "severity": "error",
+          "title": "The endpoint isn't an https link domain",
+          "fix": "Set endpoint to your link domain from Dashboard → Get started, e.g. https://<handle>.strait.link."
+        }
+      ]
+    },
+    {
+      "name": "endpoint.invalid not a url",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": null
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "endpoint.invalid",
+          "severity": "error",
+          "title": "The endpoint isn't an https link domain",
+          "fix": "Set endpoint to your link domain from Dashboard → Get started, e.g. https://<handle>.strait.link."
+        }
+      ]
+    },
+    {
+      "name": "key.invalid and endpoint.invalid",
+      "input": {
+        "platform": "android",
+        "publishableKey": "x",
+        "endpoint": "ftp://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": null
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.invalid",
+          "severity": "error",
+          "title": "Not a publishable key",
+          "fix": "Copy the publishable key (st_pub_…) from Dashboard → Get started."
+        },
+        {
+          "id": "endpoint.invalid",
+          "severity": "error",
+          "title": "The endpoint isn't an https link domain",
+          "fix": "Set endpoint to your link domain from Dashboard → Get started, e.g. https://<handle>.strait.link."
+        }
+      ]
+    },
+    {
+      "name": "endpoint with a path still uses the host",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link/",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "host.unreachable",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": null,
+          "body": null
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.unreachable",
+          "severity": "error",
+          "title": "Can't reach acme.strait.link",
+          "fix": "Check that endpoint is your link domain (Dashboard → Get started) and that this device is online."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 404",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "Not found"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing ios 404",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "Not found"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve apple-app-site-association",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 200 not JSON",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "<html></html>"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 200 an object, not an array",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[]}}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing ios 200 an array",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve apple-app-site-association",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing ios 200 no applinks.details",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"webcredentials\":{\"apps\":[]}}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve apple-app-site-association",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 500 with a valid body",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 500,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "app.none android empty array",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.none",
+          "severity": "error",
+          "title": "No Android app is set up for acme.strait.link",
+          "fix": "Add your app in Dashboard → Apps & stores."
+        }
+      ]
+    },
+    {
+      "name": "app.none android only web targets",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"target\":{\"namespace\":\"web\",\"site\":\"https://acme.strait.link\"}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.none",
+          "severity": "error",
+          "title": "No Android app is set up for acme.strait.link",
+          "fix": "Add your app in Dashboard → Apps & stores."
+        }
+      ]
+    },
+    {
+      "name": "app.none ios no details",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[]}}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.none",
+          "severity": "error",
+          "title": "No iOS app is set up for acme.strait.link",
+          "fix": "Add your app in Dashboard → Apps & stores."
+        }
+      ]
+    },
+    {
+      "name": "app.unknown android null",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": null,
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}},{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.other\",\"sha256_cert_fingerprints\":[]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.unknown",
+          "severity": "warn",
+          "title": "acme.strait.link lists com.acme.app, com.acme.other",
+          "fix": "Make sure your app is one of these."
+        }
+      ]
+    },
+    {
+      "name": "app.unknown android empty",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.unknown",
+          "severity": "warn",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": "Make sure your app is one of these."
+        }
+      ]
+    },
+    {
+      "name": "app.unknown android blank",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "   ",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.unknown",
+          "severity": "warn",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": "Make sure your app is one of these."
+        }
+      ]
+    },
+    {
+      "name": "app.unknown ios null",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": null,
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appIDs\":[\"TEAM123.com.acme.app\"],\"components\":[{\"/\":\"/*\"}]}]}}"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.unknown",
+          "severity": "warn",
+          "title": "acme.strait.link lists TEAM123.com.acme.app",
+          "fix": "Make sure your app is one of these."
+        }
+      ]
+    },
+    {
+      "name": "app.missing android",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.example.notlisted",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}},{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.other\",\"sha256_cert_fingerprints\":[]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't list com.example.notlisted",
+          "fix": "Add com.example.notlisted in Dashboard → Apps & stores (listed now: com.acme.app, com.acme.other)."
+        }
+      ]
+    },
+    {
+      "name": "app.missing ios",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.example.notlisted",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appIDs\":[\"TEAM123.com.acme.app\"],\"components\":[{\"/\":\"/*\"}]}]}}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't list com.example.notlisted",
+          "fix": "Add com.example.notlisted in Dashboard → Apps & stores (listed now: TEAM123.com.acme.app)."
+        }
+      ]
+    },
+    {
+      "name": "app.missing ios needs the dot before the bundle ID",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appIDs\":[\"TEAM123.comacme.app\"]}]}}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't list acme.app",
+          "fix": "Add acme.app in Dashboard → Apps & stores (listed now: TEAM123.comacme.app)."
+        }
+      ]
+    },
+    {
+      "name": "app.listed android, no certificate given",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "app.listed android, appId trimmed",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": " com.acme.app ",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "app.listed ios appIDs",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appIDs\":[\"TEAM123.com.acme.app\"],\"components\":[{\"/\":\"/*\"}]}]}}"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists TEAM123.com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "app.listed ios legacy appID",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appID\":\"TEAM123.com.acme.app\",\"paths\":[\"*\"]}]}}"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists TEAM123.com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "app.missing ios lists appIDs before appID, once each",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.example.notlisted",
+        "certSha256": [],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appID\":\"T1.com.a\",\"appIDs\":[\"T2.com.b\",\"T1.com.a\"]},{\"appIDs\":[\"T2.com.b\"]}]}}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't list com.example.notlisted",
+          "fix": "Add com.example.notlisted in Dashboard → Apps & stores (listed now: T2.com.b, T1.com.a)."
+        }
+      ]
+    },
+    {
+      "name": "ios ignores certificates",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+        ],
+        "file": {
+          "status": 200,
+          "body": "{\"applinks\":{\"details\":[{\"appIDs\":[\"TEAM123.com.acme.app\"],\"components\":[{\"/\":\"/*\"}]}]}}"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists TEAM123.com.acme.app",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "cert.listed",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.listed",
+          "severity": "ok",
+          "title": "This build's signing certificate is listed",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "cert.listed lower case, no colons",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.listed",
+          "severity": "ok",
+          "title": "This build's signing certificate is listed",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "cert.listed one of two certificates",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "B1:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE",
+          "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.listed",
+          "severity": "ok",
+          "title": "This build's signing certificate is listed",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "cert.listed fingerprints merged across statements",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "B1:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}},{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"b1:8f:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:17:ae\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.listed",
+          "severity": "ok",
+          "title": "This build's signing certificate is listed",
+          "fix": ""
+        }
+      ]
+    },
+    {
+      "name": "cert.missing",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "B1:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.missing",
+          "severity": "error",
+          "title": "This build's signing certificate isn't listed for com.acme.app",
+          "fix": "Add B1:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE in Dashboard → Apps & stores. Debug, release and Play App Signing keys each have their own fingerprint."
+        }
+      ]
+    },
+    {
+      "name": "cert.missing names every certificate",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "B1:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE",
+          "C2:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.missing",
+          "severity": "error",
+          "title": "This build's signing certificate isn't listed for com.acme.app",
+          "fix": "Add B1:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE, C2:8F:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:17:AE in Dashboard → Apps & stores. Debug, release and Play App Signing keys each have their own fingerprint."
+        }
+      ]
+    },
+    {
+      "name": "cert.missing package listed without fingerprints",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C"
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[]}}]"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        },
+        {
+          "id": "cert.missing",
+          "severity": "error",
+          "title": "This build's signing certificate isn't listed for com.acme.app",
+          "fix": "Add FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C in Dashboard → Apps & stores. Debug, release and Play App Signing keys each have their own fingerprint."
+        }
+      ]
+    },
+    {
+      "name": "blank certificate is ignored",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [
+          ""
+        ],
+        "file": {
+          "status": 200,
+          "body": "[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"android_app\",\"package_name\":\"com.acme.app\",\"sha256_cert_fingerprints\":[\"FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C\"]}}]"
+        }
+      },
+      "ok": true,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.listed",
+          "severity": "ok",
+          "title": "acme.strait.link lists com.acme.app",
+          "fix": ""
+        }
+      ]
+    }
+  ]
+}
