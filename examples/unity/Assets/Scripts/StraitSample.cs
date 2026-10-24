@@ -39,6 +39,8 @@ public class StraitSample : MonoBehaviour
         Client.OnLink += e => Add($"{e.Kind} link ({e.Route}, {e.AppState}): matched={e.Matched} path={e.Path ?? "-"}");
         // Links that arrive while the game is running.
         Application.deepLinkActivated += url => _ = Client.HandleUrl(url);
+        // Setup check in debug builds (contract B23): is this game listed for the link domain? See the Console.
+        if (Debug.isDebugBuild) _ = Client.Doctor(Application.identifier, log: Debug.Log);
         // The link that launched the game ("" when none), then the deferred check once per install.
         await Client.Start(Application.absoluteURL);
     }

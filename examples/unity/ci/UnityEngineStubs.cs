@@ -16,6 +16,7 @@ namespace UnityEngine
     {
         public static RuntimePlatform platform => RuntimePlatform.OSXEditor;
         public static string absoluteURL => "";
+        public static string identifier => "";
         public static event Action<string> deepLinkActivated { add { } remove { } }
     }
     public static class Resources { public static T Load<T>(string path) where T : Object => null; }
@@ -27,7 +28,7 @@ namespace UnityEngine
         public static void SetString(string key, string value) { }
         public static void Save() { }
     }
-    public static class Debug { public static void Log(object message) { } }
+    public static class Debug { public static bool isDebugBuild => true; public static void Log(object message) { } }
     public static class GUILayout
     {
         public static bool Button(string text, params object[] options) => false;
