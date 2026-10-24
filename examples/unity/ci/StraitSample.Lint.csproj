@@ -1,0 +1,16 @@
+<!-- Lint only (no Unity licence in CI): compiles the example script against this repo's SDK source (src/) and
+     a stub of the few UnityEngine APIs it uses, with Unity's C# 9. A change that breaks the public API fails it.
+     It does not build a player. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Assets/Scripts/**/*.cs" />
+    <Compile Include="UnityEngineStubs.cs" />
+    <Compile Include="../../../src/*.cs" />
+  </ItemGroup>
+</Project>

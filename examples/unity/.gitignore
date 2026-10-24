@@ -1,0 +1,7 @@
+# Your key file (copy strait-config.example.json) and what Unity and dotnet generate.
+Assets/Resources/strait-config.json
+Assets/Resources/strait-config.json.meta
+/Library/
+/Temp/
+/Logs/
+/UserSettings/

@@ -480,6 +480,21 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is
   wrapped with `unchecked` to match JS's 32-bit `|0`.
 
+## Example app
+
+[`examples/unity`](examples/unity) is a Unity project whose `StraitSample` component opens a deep link
+(`Application.deepLinkActivated` and the launch URL), shows the deferred link after an install and logs a
+`purchase` event. Its `Packages/manifest.json` installs the SDK from this repo's `src/`.
+
+1. Copy `examples/unity/Assets/Resources/strait-config.example.json` to `strait-config.json` (git-ignored)
+   and set your publishable key (`st_pub_…`, Dashboard → Get started).
+2. Open `examples/unity` in Unity Hub (2022.3), add the `StraitSample` component to a GameObject in your
+   first scene.
+3. Player Settings: add the `straitsample` URL scheme, build to a phone and open `straitsample://product/42`.
+
+CI has no Unity licence, so it compiles the example script against `src/` and a stub of the UnityEngine
+APIs it uses, with Unity's C# 9: `dotnet build examples/unity/ci/StraitSample.Lint.csproj -warnaserror`.
+
 ## Test
 
 ```sh
