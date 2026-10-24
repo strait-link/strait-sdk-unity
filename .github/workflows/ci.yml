@@ -14,6 +14,8 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - run: dotnet test test/Strait.Signature.Tests.csproj
+      - name: Example app compiles against this source (examples/unity, no Unity editor)
+        run: dotnet build examples/unity/ci/StraitSample.Lint.csproj -warnaserror
       - run: node scripts/spec-vectors.mjs
       - run: node scripts/unity-meta.mjs
       - run: node scripts/brand.mjs
