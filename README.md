@@ -45,6 +45,21 @@ built-in writer and parser (`StraitJson`).
 > Unity editor or on a device. It is a documented sketch: check it on real devices
 > before you ship.
 
+## Quick start (60 seconds)
+
+**1. Install.** In **Window → Package Manager → + → Add package from git URL…**, paste the git URL from [Install](#install).
+
+**2. Check your key and a link.** In **Dashboard → Links**, make a link with the path `summer` and the destination `https://shop.example.com/product/42`. Then ask Strait about it the way this SDK will:
+
+```sh
+curl -s https://<your-handle>.strait.link/v1/resolve -H 'Content-Type: application/json' \
+  -d '{"publishableKey":"st_pub_live_…","url":"https://<your-handle>.strait.link/summer","platform":"android"}'
+```
+
+**You should see:** `{"matched":true,"longUrl":"https://shop.example.com/product/42",…}`. The key comes from **Dashboard → Get started** and is safe in apps. `"reason":"not_found"` means the key is from another workspace or the path is wrong. The check counts as one tap in **Dashboard → Analytics**.
+
+**3. Wire it.** In Package Manager, open this package's **Samples** and import **Quick start**: it adds a ready-made `StraitBootstrap` MonoBehaviour. Put your key and link address in it, then follow [Wire it into a game](#wire-it-into-a-game).
+
 ## Platform features
 
 | Feature | Status | Notes |
