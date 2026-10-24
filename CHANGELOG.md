@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.7
+
+- New `StraitClient.Doctor(appId, certSha256, log)`: a setup check for debug builds (contract B23,
+  shared-spec ADR 0002). One GET of the link host's `assetlinks.json` (Android) or
+  `apple-app-site-association` (iOS), then the pure `Doctor.Findings`: key, endpoint, whether the host
+  lists this game (`Application.identifier`) and, on Android, its signing certificate. Same finding ids
+  and wording as every Strait SDK; never throws; logs each finding (`log: Debug.Log`). The example app
+  calls it in debug builds.
+
 ## 0.8.6
 
 - New `StraitConfig.DeviceClass` (contract B14, engine ADR 0039): `"phone"` or `"tablet"` is sent with

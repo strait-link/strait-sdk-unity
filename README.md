@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.8.6**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.8.7**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -81,7 +81,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.6
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.7
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -127,6 +127,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 | B19 | iPhone paste handoff, chosen in the Dashboard and read live from the `/v1/match` reply (`ios.pasteHandoff`): device matching first, then detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
 | B22 | Old Firebase page.link links: on a `*.page.link` link host, a short link → `/v1/resolve` (the engine matches the imported old host + code); a long link (`/?link=<http(s) URL>`) → its `link=` value is the destination, read on the device with no lookup (`StraitCore.PageLinkLongLink`) | ✓ (unit tests only, not on a device) |
+| B23 | `Doctor()` setup check: key, endpoint, and the link host's `assetlinks.json` / `apple-app-site-association` lists this game (`Application.identifier`) and, on Android, its signing certificate (`Doctor.Findings`, ids and wording from shared-spec ADR 0002); one GET, never throws, logs each finding | ✓ (unit tests + a live run against a real link host; not on a device) |
 
 ### What Strait records automatically (no extra code)
 
@@ -223,6 +224,34 @@ can place the revenue on that tap's channel and A/B variant (contracts B15/B16).
 attributed open supplies one: a browser hand-off, a Play install, or the engine's reply to a
 verified short link or a deferred match. A newer open replaces the older tap. Pass `clickId:`
 to set it yourself.
+
+### Check your setup (doctor)
+
+Most "the link opens the browser, not my game" problems are setup: the game's package / bundle ID or its
+Android signing certificate isn't listed in Dashboard → Apps & stores, or a secret key is in the game.
+`Doctor()` checks your key, your endpoint and your link host's `/.well-known/assetlinks.json` (Android) or
+`/.well-known/apple-app-site-association` (iOS) against this game (contract B23). It makes one GET, never
+throws, logs each finding and returns a `DoctorReport`. Call it in debug builds only; it never runs by itself.
+
+```csharp
+if (Debug.isDebugBuild) _ = StraitLinks.Client.Doctor(Application.identifier, log: Debug.Log);
+// Android: also pass this build's signing certificate SHA-256, if you have it: Doctor(Application.identifier, "FA:C6:…", Debug.Log)
+```
+
+You should see (all set up, Android):
+
+```
+[Strait doctor] ok key.ok: Publishable key is set
+[Strait doctor] ok app.listed: <handle>.strait.link lists com.yourcompany.game
+```
+
+On iOS the listed app shows with its Team ID (`<handle>.strait.link lists ABCDE12345.com.yourcompany.game`).
+`report.Ok` is false when any finding is an `error`; each one's `Fix` says what to change, e.g.
+`[Strait doctor] error app.missing: <handle>.strait.link doesn't list com.yourcompany.game. Fix: Add
+com.yourcompany.game in Dashboard → Apps & stores (listed now: …).` In the Editor (`Platform = "other"`) it
+checks the key and endpoint only. Intent filters and Associated Domains stay with the free web checker and the
+docs: the SDK can't see them. `Doctor.Findings(...)` is the same check as a pure function over a file you
+fetched yourself.
 
 ### PlayerPrefs storage
 
@@ -474,7 +503,8 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId, clickId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId, clickId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `Stop()`.
+- `Doctor`: `Findings(publishableKey, endpoint, platform, appId, certSha256, file)` (pure, B23) → `DoctorReport {Ok, Findings}` of `DoctorFinding {Id, Severity, Title, Fix}`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the React Native SDK's fields and wire values, minus `referralCode`.
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is

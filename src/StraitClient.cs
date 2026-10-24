@@ -328,6 +328,36 @@ namespace Strait
         public Task<LinkEvent> CheckDeferred() => RunDeferred(false);
 
         /// <summary>
+        /// Checks this game's Strait setup (contract B23): one GET of the link host's assetlinks.json (Android) or
+        /// apple-app-site-association (iOS), then <see cref="global::Strait.Doctor.Findings"/>. Call it from a debug
+        /// build; it never runs by itself and never throws. <paramref name="appId"/> = Application.identifier;
+        /// <paramref name="certSha256"/> = the Android signing certificate, if the game can read it. Each finding is
+        /// passed to <paramref name="log"/> (Unity: Debug.Log; default Console.WriteLine) with a "[Strait doctor]" prefix.
+        /// Platform "other" (the Editor) checks the key and endpoint only.
+        /// </summary>
+        public async Task<DoctorReport> Doctor(string? appId = null, string? certSha256 = null, Action<string>? log = null)
+        {
+            var platform = _config.Platform;
+            DoctorFile? file = null;
+            if ((platform == "android" || platform == "ios") && global::Strait.Doctor.Host(_config.Endpoint) != null)
+            {
+                try
+                {
+                    var (status, body) = await _transport.SendAsync("GET", _base + global::Strait.Doctor.FilePath(platform), null);
+                    file = new DoctorFile(status, body);
+                }
+                catch { file = new DoctorFile(null, null); }
+            }
+            var report = global::Strait.Doctor.Findings(_config.PublishableKey, _config.Endpoint, platform, appId, certSha256, file);
+            foreach (var f in report.Findings)
+            {
+                try { (log ?? Console.WriteLine)("[Strait doctor] " + f); }
+                catch { /* a throwing logger must not break the check */ }
+            }
+            return report;
+        }
+
+        /// <summary>
         /// Paste-button alternative of the clipboard boost (contract B19): give it the text your own paste control
         /// received (e.g. a UIPasteControl, no prompt: the person's tap is the consent). A Strait handoff link is
         /// claimed with POST /v1/handoff/claim for an exact match and raised as a deferred event (route "clipboard");

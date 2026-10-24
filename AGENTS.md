@@ -10,7 +10,7 @@ C# library for Unity 2021.2+ (Api Compatibility Level .NET Standard 2.1). The ga
 Unity → Window → Package Manager → + → Add package from git URL:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.6
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.7
 ```
 
 Keep `?path=src`. Android also needs `com.android.installreferrer:installreferrer:2.2` in Gradle (custom
