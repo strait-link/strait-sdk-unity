@@ -510,6 +510,15 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 - `StraitSignature`: deferred-match signature port (`H32`, `Compute`). C# int overflow is
   wrapped with `unchecked` to match JS's 32-bit `|0`.
 
+## Size and speed
+
+Measured 25 Oct 2026 on 0.8.7.
+
+| What | Size or time | How it was measured |
+|---|---|---|
+| Package (`src/`) | 37 KB gzipped, 122 KB on disk (C# source plus one iOS `.mm`), no dependencies | `tar czf` of `src/` |
+| Start-up | not measured yet: this Mac has no Unity or .NET. `new StraitClient(...)` does no I/O; network work starts in `Start(initialUrl)` | n/a |
+
 ## Example app
 
 [`examples/unity`](examples/unity) is a Unity project whose `StraitSample` component opens a deep link
