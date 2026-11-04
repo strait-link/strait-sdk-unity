@@ -148,15 +148,14 @@
 
 ## 0.5.0
 
-Renamed to Strait (breaking, clean break: no `Strait` aliases are kept).
+Renamed to Strait (breaking, clean break: no aliases for the names from before the rename are kept).
 
-- Package `com.strait.sdk`; namespace `Strait`; assembly
+- New names: package `com.strait.sdk`; namespace `Strait`; assembly
   `Strait.Sdk` (`Strait.Sdk.asmdef`; `.meta` GUIDs unchanged, so GUID references
-  keep resolving; asmdef references by name must change to `Strait.Sdk`); `Strait.Signature.csproj`.
-- Types: `StraitClient`, `StraitConfig`, `StraitCore`, `StraitJson`, `StraitSignature`,
-  `IStraitTransport`; `ParseStraitLink` / `ParseStraitClick` →
-  `ParseStraitLink` / `ParseStraitClick`. Sample `StraitBootstrap`.
-- Wire params are now `strait_click` and `strait_link`; the old `strait_*` names are no longer read.
+  keep resolving; asmdef references by name must change to `Strait.Sdk`); test project `Strait.Signature.csproj`.
+- Types (new names): `StraitClient`, `StraitConfig`, `StraitCore`, `StraitJson`, `StraitSignature`,
+  `IStraitTransport`; `ParseStraitLink` / `ParseStraitClick`. Sample `StraitBootstrap`.
+- Wire params are now `strait_click` and `strait_link`; the params from before the rename are no longer read.
 - Storage keys are now `strait.*` (`strait.deferredChecked`, `strait.pendingOpens`); values saved
   under the old keys are ignored, so a deferred link may be checked once more after upgrading.
 - Publishable keys are issued as `st_pub_live_…` / `st_pub_test_…`.
