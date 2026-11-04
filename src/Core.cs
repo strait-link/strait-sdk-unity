@@ -48,6 +48,21 @@ namespace Strait
         public IReadOnlyDictionary<string, string> Params { get; }
     }
 
+    /// <summary>What <see cref="StraitClient.Start"/> does with the once-per-install flag (contract B6a, shared-spec ADR 0003).</summary>
+    public sealed class FirstLaunchStateResult
+    {
+        public FirstLaunchStateResult(bool firstLaunch, bool clearFlag, string? storeInstallTime)
+        {
+            FirstLaunch = firstLaunch; ClearFlag = clearFlag; StoreInstallTime = storeInstallTime;
+        }
+        /// <summary>Run the once-per-install deferred check / count this launch as the install's first.</summary>
+        public bool FirstLaunch { get; }
+        /// <summary>Set <c>strait.deferredChecked</c> to "" first: the storage came back from another install.</summary>
+        public bool ClearFlag { get; }
+        /// <summary>Then write this to <c>strait.installTime</c> (null = leave it).</summary>
+        public string? StoreInstallTime { get; }
+    }
+
     /// <summary>
     /// Result of <see cref="StraitCore.ClassifyUrl"/>. When <see cref="NeedsResolve"/> is true the
     /// URL is a Strait short link (ask /v1/resolve) and Url/Path/Params/ClickId are null.
@@ -441,6 +456,30 @@ namespace Strait
             var sb = new StringBuilder("o_").Append(ToBase36(now)).Append('_');
             for (int i = 0; i < 12; i++) sb.Append(OpenIdChars[(int)Math.Floor(random() * 36)]);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// A unique id for one conversion event when the app gives none (contract B13a): the engine stores an
+        /// eventId once, so a retried send is never counted twice. <c>e_&lt;base36 ms&gt;_&lt;12 × [a-z0-9]&gt;</c>.
+        /// </summary>
+        public static string NewEventId(long now, Func<double>? random = null) => "e" + NewOpenId(now, random).Substring(1);
+
+        /// <summary>
+        /// B6a: storage restored from a backup of another install (Android Auto Backup, a restored iPhone) brings back
+        /// <c>strait.deferredChecked</c>. The app's install time, stored next to it, tells: a different stored time = a
+        /// new install, so the check runs again. No stored time (an app updated from an older SDK) = adopt it, never a
+        /// new install. Unknown install time (null, below 1 ms, not finite) = the B6 rule alone. Fractions are truncated.
+        /// </summary>
+        public static FirstLaunchStateResult FirstLaunchState(string? flag, string? storedInstallTime, double? installTime)
+        {
+            string? t = installTime is double d && !double.IsNaN(d) && !double.IsInfinity(d) && d >= 1 && d < 9e18
+                ? ((long)Math.Truncate(d)).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : null;
+            var stored = string.IsNullOrEmpty(storedInstallTime) ? null : storedInstallTime;
+            if (flag != "1") return new FirstLaunchStateResult(true, false, t != null && t != stored ? t : null);
+            if (t == null || t == stored) return new FirstLaunchStateResult(false, false, null);
+            if (stored == null) return new FirstLaunchStateResult(false, false, t);
+            return new FirstLaunchStateResult(true, true, t);
         }
 
         private static readonly Random Rng = new Random();

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.0 (unreleased, launch week)
+
+- Fix: reinstalls from a link are no longer lost. Android Auto Backup and restored iPhones put back
+  PlayerPrefs, and with it the "deferred check done" flag, so a reinstall skipped its deferred link and
+  was never counted. New optional `StraitConfig.InstallTime` (`Func<long?>`, Unix ms): the SDK stores it
+  as `strait.installTime` and runs the check again when it changed; an update, or a game updated from an
+  older SDK, is never a new install (contract B6a, shared-spec ADR 0003). The Quick start sample's
+  `StraitDevice.InstallTime` reads `PackageInfo.firstInstallTime` on Android and a backup-excluded
+  marker file on iOS. New `StraitCore.FirstLaunchState`.
+- New: `TrackEvent(..., eventId: order.Id)`; the engine stores each eventId once. Left out, the SDK makes
+  one (`StraitCore.NewEventId`), so a retry never counts twice. Events that can't be sent (offline, 429,
+  5xx) are kept in the open-report queue and sent later; `PendingOpenReports()` counts them (contract
+  B13a, ADR 0004).
+- Conformance vectors v10 (`firstLaunchState`).
+
 ## 0.8.7
 
 - New `StraitClient.Doctor(appId, certSha256, log)`: a setup check for debug builds (contract B23,

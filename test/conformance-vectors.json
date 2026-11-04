@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -2093,6 +2093,162 @@
     {
       "shortestSide": -1,
       "expected": null
+    }
+  ],
+  "firstLaunchState": [
+    {
+      "name": "normal launch",
+      "flag": "1",
+      "stored": "1790000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "app updated from an SDK without installTime: adopt, not a new install",
+      "flag": "1",
+      "stored": null,
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "stored empty string counts as never written",
+      "flag": "1",
+      "stored": "",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "storage restored from a backup of another install: run again",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": true,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "install time unknown: the flag alone",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": null,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "install time unknown, nothing stored",
+      "flag": "1",
+      "stored": null,
+      "installTime": null,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "first launch",
+      "flag": null,
+      "stored": null,
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "first launch, flag empty (cleared by a restore)",
+      "flag": "",
+      "stored": "1790000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "first launch after a restore cleared the flag, time not yet written",
+      "flag": "",
+      "stored": "1780000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "first launch, install time unknown",
+      "flag": null,
+      "stored": null,
+      "installTime": null,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "fraction of a ms is truncated",
+      "flag": "1",
+      "stored": "1790000000000",
+      "installTime": 1790000000000.75,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "zero install time = unknown",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": 0,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "negative install time = unknown",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": -5,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "flag other than \"1\" = not checked",
+      "flag": "true",
+      "stored": "1790000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
     }
   ]
 }

@@ -128,6 +128,15 @@ namespace Strait
         /// <see cref="StraitCore.DeviceClassForSize"/> of <c>smallestScreenWidthDp</c> on Android).
         /// </summary>
         public Func<string?>? DeviceClass { get; set; }
+        /// <summary>
+        /// The game's install time in Unix ms, or null when unknown (contract B6a). Android Auto Backup and restored
+        /// iPhones bring back the "deferred check done" flag (PlayerPrefs is backed up), so a reinstall from a link
+        /// would skip its deferred link and go uncounted; with this, a changed install time runs the check again.
+        /// Android: <c>PackageManager.getPackageInfo(packageName, 0).firstInstallTime</c>; iOS: a marker file excluded
+        /// from backup (the QuickStart sample's <c>StraitDevice.InstallTime</c>). A throw counts as unknown.
+        /// Default: none (the flag alone, as before).
+        /// </summary>
+        public Func<long?>? InstallTime { get; set; }
     }
 
     /// <summary>One event type for every link case (B9). Wire-identical to the React Native SDK's LinkEvent.</summary>
@@ -182,6 +191,8 @@ namespace Strait
         public const string QueueKey = "strait.pendingOpens";
         /// <summary>Storage key of the remembered tap (contract B15): <c>{"clickId":…,"at":…}</c>, or empty.</summary>
         public const string TapKey = "strait.lastTap";
+        /// <summary>Storage key of the install time stored with the flag (contract B6a), decimal Unix ms.</summary>
+        public const string InstallTimeKey = "strait.installTime";
 
         private readonly StraitConfig _config;
         private readonly string _base;
@@ -268,7 +279,17 @@ namespace Strait
             string? flag;
             try { flag = await _storage.GetItemAsync(DeferredFlag); }
             catch { flag = "1"; } // unreadable storage = already checked: don't risk a stale deferred jump every launch
-            bool firstLaunch = flag != "1";
+            // B6a: the install time stored with the flag tells a restored backup of another install from this one.
+            string? storedInstallTime;
+            try { storedInstallTime = await _storage.GetItemAsync(InstallTimeKey); }
+            catch { storedInstallTime = null; }
+            long? installTime;
+            try { installTime = _config.InstallTime?.Invoke(); }
+            catch { installTime = null; }
+            var state = StraitCore.FirstLaunchState(flag, storedInstallTime, installTime);
+            if (state.ClearFlag) await Write(DeferredFlag, ""); // first, so dying in between is still a first launch
+            if (state.StoreInstallTime != null) await Write(InstallTimeKey, state.StoreInstallTime);
+            bool firstLaunch = state.FirstLaunch;
             if (hasInitial)
             {
                 // Opened by a link on first launch = the user's intent right now: no deferred
@@ -285,9 +306,11 @@ namespace Strait
             _ = Flush();
         }
 
-        private async Task SetFlag()
+        private Task SetFlag() => Write(DeferredFlag, "1");
+
+        private async Task Write(string key, string value)
         {
-            try { await _storage.SetItemAsync(DeferredFlag, "1"); }
+            try { await _storage.SetItemAsync(key, value); }
             catch { /* best effort */ }
         }
 
@@ -394,10 +417,10 @@ namespace Strait
             return Emit(ev);
         }
 
-        /// <summary>Open reports saved while offline, waiting to be sent (debugging).</summary>
+        /// <summary>Open reports and events (B13a) saved while offline, waiting to be sent (debugging).</summary>
         public Task<int> PendingOpenReports() => Serial(async () => (await ReadQueue()).Count);
 
-        /// <summary>Send saved open reports now (also happens on Start and when the app becomes active).</summary>
+        /// <summary>Send saved open reports and events now (also happens on Start and when the app becomes active).</summary>
         public Task FlushOpenReports() => Flush();
 
         // ------------------------------------------------------------------ fingerprint + events
@@ -431,8 +454,12 @@ namespace Strait
         /// <summary>
         /// Conversion / revenue event. True when the engine accepted it (2xx). Carries the tap id of the
         /// last attributed link open (at most 7 days old, contract B15) unless <paramref name="clickId"/> is given.
+        /// Pass your order id as <paramref name="eventId"/> (1-64 of A-Z a-z 0-9 _ . : -): the engine stores each
+        /// eventId once (else the SDK makes one). False = not accepted now; when the network or the server was the
+        /// reason (no answer, 429, 5xx), the event is kept and sent later with the open reports (contract B13a).
         /// </summary>
-        public async Task<bool> TrackEvent(string name, double? value = null, string? currency = null, string? linkId = null, string? clickId = null)
+        public async Task<bool> TrackEvent(string name, double? value = null, string? currency = null, string? linkId = null, string? clickId = null,
+            string? eventId = null)
         {
             try
             {
@@ -443,18 +470,18 @@ namespace Strait
                 try { stored = await _storage.GetItemAsync(TapKey); }
                 catch { stored = null; }
                 if (StraitCore.StaleTap(stored, Now())) DropStaleTap(Now()); // B18: delete, don't just ignore
-                var tapId = StraitCore.EventClickId(stored, Now(), clickId);
-                var fields = new List<KeyValuePair<string, object?>>
+                long at = Now();
+                // B13a: built once (tap id chosen now), with an eventId so a retry is stored once. Null values are left
+                // out of the JSON; the publishable key is added at send time, never saved.
+                var ev = new Dictionary<string, object?>
                 {
-                    Kv("publishableKey", _config.PublishableKey),
-                    Kv("event", name),
-                    Kv("platform", _config.Platform),
-                    Kv("value", value),
-                    Kv("currency", currency),
-                    Kv("linkId", linkId),
-                    Kv("clickId", tapId),
+                    ["type"] = "event", ["at"] = at, ["event"] = name, ["platform"] = _config.Platform,
+                    ["eventId"] = string.IsNullOrEmpty(eventId) ? StraitCore.NewEventId(at) : eventId,
+                    ["value"] = value, ["currency"] = currency, ["linkId"] = linkId,
+                    ["clickId"] = StraitCore.EventClickId(stored, at, clickId),
                 };
-                return (await Call("POST", "/v1/event", fields)).Ok;
+                var status = await Report(ev);
+                return status >= 200 && status < 300;
             }
             catch { return false; }
         }
@@ -811,12 +838,19 @@ namespace Strait
                 return true;
             });
 
-        /// <summary>POST /v1/open; the HTTP status, or null when there was no answer.</summary>
+        private static bool IsEvent(Dictionary<string, object?> r) => r.TryGetValue("type", out var t) && t as string == "event";
+
+        /// <summary>POST /v1/open (or /v1/event for a saved event, B13a); the HTTP status, or null when there was no answer.</summary>
         private async Task<int?> SendReport(Dictionary<string, object?> report)
         {
             try
             {
                 var body = new List<KeyValuePair<string, object?>> { Kv("publishableKey", _config.PublishableKey) };
+                if (IsEvent(report))
+                {
+                    foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "type" && kv.Key != "at") body.Add(kv);
+                    return (await Call("POST", "/v1/event", body)).Status;
+                }
                 foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "deviceClass") body.Add(kv);
                 body.Add(Kv("deviceClass", DeviceClassValue())); // B14: added at send time, never queued
                 return (await Call("POST", "/v1/open", body)).Status;
@@ -824,16 +858,18 @@ namespace Strait
             catch { return null; }
         }
 
-        /// <summary>Report an open now; keep it for retry if it doesn't get through. Never throws.</summary>
-        private async Task Report(Dictionary<string, object?> report)
+        /// <summary>Report an open (or an event) now; keep it for retry if it doesn't get through. The HTTP status, or null. Never throws.</summary>
+        private async Task<int?> Report(Dictionary<string, object?> report)
         {
+            int? status = null;
             try
             {
-                var status = await SendReport(report);
+                status = await SendReport(report);
                 if (StraitCore.ShouldRetryReport(status)) await Enqueue(report);
                 else _ = Flush(); // the network works: send anything saved earlier
             }
             catch { /* never throw */ }
+            return status;
         }
 
         /// <summary>Send the saved reports in order; stop at the first one that gets no answer.</summary>
