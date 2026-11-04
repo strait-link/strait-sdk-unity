@@ -74,11 +74,14 @@ public static class StraitDevice
         // doesn't depend on how the runtime reports file creation times.
         var dir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Application.persistentDataPath), "Library", "Application Support", "Strait");
         var file = System.IO.Path.Combine(dir, "install-time");
-        if (System.IO.File.Exists(file) && long.TryParse(System.IO.File.ReadAllText(file), out var saved)) return saved;
+        // An unreadable marker is unknown (the flag alone), never a new time: a new time would count a reinstall.
+        if (System.IO.File.Exists(file)) return long.TryParse(System.IO.File.ReadAllText(file), out var saved) ? saved : (long?)null;
         System.IO.Directory.CreateDirectory(dir);
         UnityEngine.iOS.Device.SetNoBackupFlag(dir);
         var now = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        System.IO.File.WriteAllText(file, now.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var tmp = file + ".tmp";                // written whole, then renamed: a kill mid-write leaves no half marker
+        System.IO.File.WriteAllText(tmp, now.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        System.IO.File.Move(tmp, file);
         UnityEngine.iOS.Device.SetNoBackupFlag(file);
         return now;
 #else

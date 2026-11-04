@@ -246,7 +246,7 @@ one once, so a retry or a second report of the same order never counts twice. Le
 An event that can't be sent (offline, 429 or a server error) is kept with the saved open reports in
 `strait.pendingOpens` and sent later, for up to 7 days (on `Start`, when the game comes back to the front, or
 after the next report that gets through); `TrackEvent` then returns `false`, and `PendingOpenReports()`
-counts it. The tap id is chosen when you call, not at retry time. Refunds are not supported yet (contract B13a).
+counts it. The tap id is chosen when you call, not at retry time. Refunds are not supported yet (contract B13a). Revenue you must trust (billing, payouts) belongs on your server with the secret key: the app's publishable key is public, so anyone who can guess an order id could send it first.
 
 ### Check your setup (doctor)
 
