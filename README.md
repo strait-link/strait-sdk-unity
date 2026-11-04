@@ -281,9 +281,13 @@ the hardware model on iOS (an iPad says "iPad…" even for an iPhone-only game) 
 standard smallest-width rule on Android (600 dp or more = tablet).
 
 ```csharp
+#nullable enable // Assets/ compiles with nullable off; this keeps `string?` from warning (CS8632)
+using Strait;
+using UnityEngine;
+
 public static class StraitDevice
 {
-    public static DeviceFields Collect()
+    public static DeviceFields? Collect()
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
