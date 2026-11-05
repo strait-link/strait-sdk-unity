@@ -112,7 +112,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B3 | Short-link hosts (endpoint + `LinkHosts`, via `NormalizeLinkHosts`) → `POST /v1/resolve {publishableKey,url,platform}` | ✓ |
 | B4 | `ClassifyUrl` (custom scheme → `https://host/path?q`; `strait_click` tap id removed via `TakeClickId`, returned as `ClickId`) | ✓ |
 | B5 | `closed` for the launch URL, else `AppStateTracker` (2000 / 1000 ms) | ✓ |
-| B6a | Reinstall-safe first open: `StraitConfig.InstallTime` stored as `strait.installTime`; a changed install time clears the restored flag and runs the check again (`StraitCore.FirstLaunchState`, vectors v10) | ✓ (the game supplies it, see below) |
+| B6a | Reinstall-safe first open: `StraitConfig.InstallTime` stored as `strait.installTime`; a changed install time clears the restored flag and runs the check again (`StraitCore.FirstLaunchState`, vectors v11) | ✓ (the game supplies it, see below) |
 | B6 | Deferred check once per install (`strait.deferredChecked`), skipped but marked when launched by a link; marked only once the engine answered (no answer / 429 / 5xx → `reason:"network"`, retried next launch); `CheckDeferred()` sends no `openId` | ✓ |
 | B7 | Android: referrer `strait_link` → `/v1/referrer {linkId, clickId, openId, at}`, else or on a miss → `/v1/match` (same `openId`) | ✓ (the game supplies the referrer) |
 | B8 | iOS: `/v1/match` with device fields + `openId`, `at` | ✓ |
@@ -122,7 +122,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B12 | `SplitUrl` matches the vectors exactly (no `System.Uri`) | ✓ |
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
 | B13a | `TrackEvent(eventId:)` (else `StraitCore.NewEventId`); no answer / 429 / 5xx → saved in `strait.pendingOpens` (`"type":"event"`, no key) and flushed to `/v1/event` | ✓ |
-| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
+| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; a 429/5xx stops the flush and holds the queue (`StraitCore.RetryDelayMs`, `Retry-After`, C1); `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
@@ -147,7 +147,9 @@ Reports that can't be sent (offline, server busy) are saved in `Storage` (the sa
 store as the deferred flag, e.g. `PlayerPrefsStore`) and retried on the next `Start`,
 whenever `OnAppState("active")` is called (so wire `OnApplicationPause` /
 `OnApplicationFocus` as shown below), and after any report that gets through, for up
-to 7 days (max 100). The engine de-duplicates by open id, so nothing is counted twice.
+to 7 days (max 100). When the server is busy (429 or 5xx) the SDK waits before
+sending the saved ones again: 15–30 s, doubling each time in a row up to 1 hour, and at
+least as long as the server's `Retry-After`. The engine de-duplicates by open id, so nothing is counted twice.
 Navigation never waits for a report. The first launch of an install is marked as
 such, so dashboards can tell **new users** (installed and opened) from **existing
 users** (already had the game). The deferred check is only marked done once the
@@ -521,14 +523,21 @@ public static class PlayReferrer
 ### WebGL: UnityWebRequest transport
 
 `HttpClient` does not work on WebGL. Supply a transport there. It must throw on network
-failure, which the client reports as `reason: "network"`:
+failure, which the client reports as `reason: "network"`, and should return the `Retry-After`
+header so a busy server's wait is respected (`IStraitRetryAfterTransport`):
 
 ```csharp
-public sealed class UnityWebRequestTransport : IStraitTransport
+public sealed class UnityWebRequestTransport : IStraitRetryAfterTransport
 {
-    public Task<(int Status, string Body)> SendAsync(string method, string url, string json)
+    public async Task<(int Status, string Body)> SendAsync(string method, string url, string json)
     {
-        var tcs = new TaskCompletionSource<(int, string)>();
+        var (status, body, _) = await SendWithRetryAfterAsync(method, url, json);
+        return (status, body);
+    }
+
+    public Task<(int Status, string Body, string RetryAfter)> SendWithRetryAfterAsync(string method, string url, string json)
+    {
+        var tcs = new TaskCompletionSource<(int, string, string)>();
         var req = new UnityEngine.Networking.UnityWebRequest(url, method)
             { downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer() };
         if (json != null)
@@ -541,7 +550,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
             if (req.result == UnityEngine.Networking.UnityWebRequest.Result.ConnectionError)
                 tcs.TrySetException(new Exception(req.error));
             else
-                tcs.TrySetResult(((int)req.responseCode, req.downloadHandler.text ?? ""));
+                tcs.TrySetResult(((int)req.responseCode, req.downloadHandler.text ?? "", req.GetResponseHeader("Retry-After")));
             req.Dispose();
         };
         return tcs.Task;
@@ -552,7 +561,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
 ## API summary
 
 - `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `DeviceClassForSize`, `DeviceClassForModel`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
-  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`, `NewEventId`, `FirstLaunchState`
+  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `RetryDelayMs`, `NewOpenId`, `NewEventId`, `FirstLaunchState`
   (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,

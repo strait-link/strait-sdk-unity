@@ -13,7 +13,13 @@
   one (`StraitCore.NewEventId`), so a retry never counts twice. Events that can't be sent (offline, 429,
   5xx) are kept in the open-report queue and sent later; `PendingOpenReports()` counts them (contract
   B13a, ADR 0004).
-- Conformance vectors v10 (`firstLaunchState`).
+- Fix: when the server is busy (429 or 5xx) the saved queue no longer sends its whole backlog on
+  every foreground. A flush stops at the first 429/5xx and the queue waits 15–30 s, doubling each
+  time in a row up to 1 hour, and at least the server's `Retry-After` (contract B14 backoff, C1,
+  shared-spec ADR 0005). New opens and events are still sent once when they happen. New
+  `StraitCore.RetryDelayMs`; the default transport passes `Retry-After`, and a custom one can too by
+  implementing `IStraitRetryAfterTransport` (the README's WebGL `UnityWebRequestTransport` does).
+- Conformance vectors v11 (`firstLaunchState`, `retryDelay`).
 
 ## 0.8.7
 

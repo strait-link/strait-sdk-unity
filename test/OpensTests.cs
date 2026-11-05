@@ -19,6 +19,7 @@ namespace Strait.Tests
         private const string Endpoint = "https://links.test";
         private const string Click = "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f";
         private const string OpenIdPattern = "^o_[a-z0-9]+_[a-z0-9]{12}$";
+        private const long Hour = 3_600_000;
 
         private static DeviceFields Device() => new DeviceFields { ScreenWidth = 411, PixelRatio = 2.625, Language = "en", Timezone = "Asia/Kolkata" };
 
@@ -28,6 +29,7 @@ namespace Strait.Tests
             public string Body = "{}";
             public bool Offline;
             public bool Hang;
+            public string? RetryAfter;
         }
 
         private static Reply Ok(string body) => new Reply { Body = body };
@@ -48,7 +50,7 @@ namespace Strait.Tests
         }
 
         /// <summary>Fake engine whose answer per path can change mid-test. Unknown path → 404.</summary>
-        private sealed class FakeEngine : IStraitTransport
+        private sealed class FakeEngine : IStraitRetryAfterTransport
         {
             public readonly Dictionary<string, Reply> Routes;
             public readonly List<Call> Calls = new List<Call>();
@@ -57,14 +59,20 @@ namespace Strait.Tests
 
             public List<Call> Of(string path) { lock (Calls) return Calls.Where(c => c.Path == path).ToList(); }
 
-            public Task<(int Status, string Body)> SendAsync(string method, string url, string? jsonBody)
+            public async Task<(int Status, string Body)> SendAsync(string method, string url, string? jsonBody)
+            {
+                var (status, body, _) = await SendWithRetryAfterAsync(method, url, jsonBody);
+                return (status, body);
+            }
+
+            public Task<(int Status, string Body, string? RetryAfter)> SendWithRetryAfterAsync(string method, string url, string? jsonBody)
             {
                 var path = new Uri(url).AbsolutePath;
                 lock (Calls) Calls.Add(new Call { Path = path, Body = JsonDocument.Parse(jsonBody ?? "{}").RootElement.Clone() });
                 var r = Routes.TryGetValue(path, out var reply) ? reply : Status(404, "{\"error\":\"not found\"}");
                 if (r.Offline) throw new HttpRequestException("Network request failed");
-                if (r.Hang) return new TaskCompletionSource<(int, string)>().Task;
-                return Task.FromResult((r.Status, r.Body));
+                if (r.Hang) return new TaskCompletionSource<(int, string, string?)>().Task;
+                return Task.FromResult((r.Status, r.Body, r.RetryAfter));
             }
         }
 
@@ -79,7 +87,8 @@ namespace Strait.Tests
             public void Advance(long ms) => T += ms;
         }
 
-        private static Harness Make(FakeEngine engine, IKeyValueStore? storage = null, string? referrer = null, string platform = "android")
+        private static Harness Make(FakeEngine engine, IKeyValueStore? storage = null, string? referrer = null, string platform = "android",
+            Func<double>? random = null)
         {
             var h = new Harness { Storage = storage ?? new MemoryKeyValueStore() };
             h.Strait = new StraitClient(new StraitConfig
@@ -92,6 +101,7 @@ namespace Strait.Tests
                 DeviceFields = Device,
                 Transport = engine,
                 Clock = () => h.T,
+                Random = random,
             });
             h.Strait.OnLink += e => { lock (h.Events) h.Events.Add(e); };
             return h;
@@ -234,9 +244,119 @@ namespace Strait.Tests
             await Settle();
             Assert.Equal(1, await h.Strait.PendingOpenReports());
             engine.Routes["/v1/open"] = Status(429);
+            h.Advance(Hour); // past the backoff hold (C1)
             await h.Strait.FlushOpenReports();
             Assert.Equal(1, await h.Strait.PendingOpenReports());
             engine.Routes["/v1/open"] = Status(400, "{\"error\":\"bad\"}");
+            h.Advance(Hour);
+            await h.Strait.FlushOpenReports();
+            Assert.Equal(0, await h.Strait.PendingOpenReports());
+        }
+
+        // C1: a server under load (429/5xx) is not hammered by every phone's queue.
+        private static async Task QueueThree(Harness h, FakeEngine engine)
+        {
+            engine.Routes["/v1/open"] = Offline();
+            foreach (var p in new[] { 1, 2, 3 }) h.Tap($"straitlink://a.b/{p}");
+            await Settle();
+            Assert.Equal(3, await h.Strait.PendingOpenReports());
+            lock (engine.Calls) engine.Calls.Clear();
+        }
+
+        [Fact]
+        public async Task Backoff_StopsTheFlushAtTheFirst429Or5xx_TheRestStaySavedAndUnsent()
+        {
+            var engine = new FakeEngine();
+            var h = Make(engine, Returning());
+            await h.Strait.Start(null);
+            await QueueThree(h, engine);
+            engine.Routes["/v1/open"] = Status(503);
+            await h.Strait.FlushOpenReports();
+            Assert.Single(engine.Of("/v1/open"));
+            Assert.Equal(3, await h.Strait.PendingOpenReports());
+        }
+
+        [Fact]
+        public async Task Backoff_HoldsTheQueueForTheRetryAfterOfA429_FlushAndForegroundWait()
+        {
+            var engine = new FakeEngine();
+            var h = Make(engine, Returning());
+            await h.Strait.Start(null);
+            await QueueThree(h, engine);
+            engine.Routes["/v1/open"] = new Reply { Status = 429, RetryAfter = "120" };
+            await h.Strait.FlushOpenReports();
+            Assert.Single(engine.Of("/v1/open"));
+            engine.Routes["/v1/open"] = Accepted();
+            h.Advance(119_000);
+            await h.Strait.FlushOpenReports();
+            Assert.Single(engine.Of("/v1/open")); // held
+            h.SetState("background"); h.Advance(5000); h.SetState("active"); // foreground at 124 s: past the hold
+            await Settle();
+            Assert.Equal(4, engine.Of("/v1/open").Count);
+            Assert.Equal(0, await h.Strait.PendingOpenReports());
+        }
+
+        [Fact]
+        public async Task Backoff_WaitsUntil120s_NothingIsSentWhileHeld()
+        {
+            var engine = new FakeEngine();
+            var h = Make(engine, Returning());
+            await h.Strait.Start(null);
+            await QueueThree(h, engine);
+            engine.Routes["/v1/open"] = new Reply { Status = 429, RetryAfter = "120" };
+            await h.Strait.FlushOpenReports();
+            engine.Routes["/v1/open"] = Accepted();
+            h.Advance(119_999);
+            await h.Strait.FlushOpenReports();
+            h.SetState("background"); h.SetState("active");
+            await Settle();
+            Assert.Single(engine.Of("/v1/open"));
+            h.Advance(1);
+            await h.Strait.FlushOpenReports();
+            Assert.Equal(4, engine.Of("/v1/open").Count);
+        }
+
+        [Fact]
+        public async Task Backoff_WithoutRetryAfter_ExponentialWithJitter_AnAnswerResetsIt()
+        {
+            var engine = new FakeEngine();
+            var h = Make(engine, Returning(), random: () => 0); // the shortest jitter: half the step
+            await h.Strait.Start(null);
+            await QueueThree(h, engine);
+            engine.Routes["/v1/open"] = Status(503);
+            await h.Strait.FlushOpenReports(); // failure 1: hold 15 s
+            h.Advance(14_999);
+            await h.Strait.FlushOpenReports();
+            Assert.Single(engine.Of("/v1/open"));
+            h.Advance(1);
+            await h.Strait.FlushOpenReports(); // failure 2: hold 30 s
+            Assert.Equal(2, engine.Of("/v1/open").Count);
+            h.Advance(29_999);
+            await h.Strait.FlushOpenReports();
+            Assert.Equal(2, engine.Of("/v1/open").Count);
+            h.Advance(1);
+            engine.Routes["/v1/open"] = Accepted();
+            await h.Strait.FlushOpenReports(); // answered: sent, hold cleared
+            Assert.Equal(5, engine.Of("/v1/open").Count);
+            engine.Routes["/v1/open"] = Status(502);
+            h.Tap("straitlink://a.b/4"); // live report fails: failure 1 again (15 s, not 60 s)
+            await Settle();
+            engine.Routes["/v1/open"] = Accepted();
+            h.Advance(15_000);
+            await h.Strait.FlushOpenReports();
+            Assert.Equal(0, await h.Strait.PendingOpenReports());
+        }
+
+        [Fact]
+        public async Task Backoff_NoAnswerAddsNoHold_TheNextFlushSends()
+        {
+            var engine = new FakeEngine();
+            var h = Make(engine, Returning());
+            await h.Strait.Start(null);
+            await QueueThree(h, engine);
+            await h.Strait.FlushOpenReports(); // still offline: stops at the first
+            Assert.Single(engine.Of("/v1/open"));
+            engine.Routes["/v1/open"] = Accepted();
             await h.Strait.FlushOpenReports();
             Assert.Equal(0, await h.Strait.PendingOpenReports());
         }

@@ -38,8 +38,18 @@ namespace Strait
         Task<(int Status, string Body)> SendAsync(string method, string url, string? jsonBody);
     }
 
+    /// <summary>
+    /// A transport that also returns the response's Retry-After header (or null), so the open/event queue waits at
+    /// least as long as a busy server asks (contract B14 backoff, C1). <see cref="HttpClientTransport"/> implements it.
+    /// A plain <see cref="IStraitTransport"/> still works: the queue then backs off on its own schedule.
+    /// </summary>
+    public interface IStraitRetryAfterTransport : IStraitTransport
+    {
+        Task<(int Status, string Body, string? RetryAfter)> SendWithRetryAfterAsync(string method, string url, string? jsonBody);
+    }
+
     /// <summary>Default transport on System.Net.Http.HttpClient. (WebGL: supply a UnityWebRequest transport.)</summary>
-    public sealed class HttpClientTransport : IStraitTransport
+    public sealed class HttpClientTransport : IStraitRetryAfterTransport
     {
         private static readonly Lazy<HttpClient> Shared = new Lazy<HttpClient>(() =>
             new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
@@ -49,13 +59,20 @@ namespace Strait
 
         public async Task<(int Status, string Body)> SendAsync(string method, string url, string? jsonBody)
         {
+            var (status, body, _) = await SendWithRetryAfterAsync(method, url, jsonBody);
+            return (status, body);
+        }
+
+        public async Task<(int Status, string Body, string? RetryAfter)> SendWithRetryAfterAsync(string method, string url, string? jsonBody)
+        {
             using (var req = new HttpRequestMessage(new HttpMethod(method), url))
             {
                 if (jsonBody != null) req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
                 using (var res = await _http.SendAsync(req))
                 {
                     var body = res.Content == null ? "" : await res.Content.ReadAsStringAsync();
-                    return ((int)res.StatusCode, body);
+                    var retryAfter = res.Headers.TryGetValues("Retry-After", out var values) ? string.Join(",", values) : null;
+                    return ((int)res.StatusCode, body, retryAfter);
                 }
             }
         }
@@ -120,6 +137,8 @@ namespace Strait
         public IStraitTransport? Transport { get; set; }
         /// <summary>Clock in Unix ms. Default: system clock. (Tests inject a fake.)</summary>
         public Func<long>? Clock { get; set; }
+        /// <summary>Random number in [0, 1) for the queue backoff jitter (C1). Default: System.Random. (Tests inject a fake.)</summary>
+        public Func<double>? Random { get; set; }
         /// <summary>
         /// What the game runs on, sent as <c>deviceClass</c> with /v1/resolve and /v1/open (contract B14):
         /// "phone" or "tablet"; anything else, null or a throw sends nothing. iPadOS Safari sends a Mac user agent,
@@ -200,6 +219,7 @@ namespace Strait
         private readonly IKeyValueStore _storage;
         private readonly IStraitTransport _transport;
         private readonly Func<long> _now;
+        private readonly Func<double> _random;
         private readonly AppStateTracker _tracker = new AppStateTracker();
         private readonly object _gate = new object();
         private readonly List<LinkEvent> _events = new List<LinkEvent>();
@@ -208,6 +228,10 @@ namespace Strait
         // Queue operations run one at a time (storage is async).
         private readonly SemaphoreSlim _queueLock = new SemaphoreSlim(1, 1);
         private Task? _flushing;
+        // C1: after a 429/5xx the queue waits RetryDelayMs (exponential, jittered, at least the Retry-After) before it
+        // sends again; any other answer ends the wait; no answer adds none. In memory (guarded by _gate).
+        private int _failures;
+        private long _holdUntil;
         // Remembered-tap writes are chained so a TrackEvent right after an open sees them.
         private Task _tapWrite = Task.CompletedTask;
         private readonly object _tapGate = new object();
@@ -228,6 +252,7 @@ namespace Strait
             _storage = config.Storage ?? new MemoryKeyValueStore();
             _transport = config.Transport ?? new HttpClientTransport();
             _now = config.Clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            _random = config.Random ?? StraitCore.DefaultRandom;
         }
 
         /// <summary>Hosts treated as Strait short-link hosts (endpoint host + LinkHosts), lower-cased.</summary>
@@ -840,20 +865,35 @@ namespace Strait
 
         private static bool IsEvent(Dictionary<string, object?> r) => r.TryGetValue("type", out var t) && t as string == "event";
 
-        /// <summary>POST /v1/open (or /v1/event for a saved event, B13a); the HTTP status, or null when there was no answer.</summary>
+        /// <summary>
+        /// POST /v1/open (or /v1/event for a saved event, B13a); the HTTP status, or null when there was no answer.
+        /// A 429/5xx starts or extends the queue's backoff hold (C1); any other answer ends it.
+        /// </summary>
         private async Task<int?> SendReport(Dictionary<string, object?> report)
         {
             try
             {
                 var body = new List<KeyValuePair<string, object?>> { Kv("publishableKey", _config.PublishableKey) };
+                Response res;
                 if (IsEvent(report))
                 {
                     foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "type" && kv.Key != "at") body.Add(kv);
-                    return (await Call("POST", "/v1/event", body)).Status;
+                    res = await Call("POST", "/v1/event", body);
                 }
-                foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "deviceClass") body.Add(kv);
-                body.Add(Kv("deviceClass", DeviceClassValue())); // B14: added at send time, never queued
-                return (await Call("POST", "/v1/open", body)).Status;
+                else
+                {
+                    foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "deviceClass") body.Add(kv);
+                    body.Add(Kv("deviceClass", DeviceClassValue())); // B14: added at send time, never queued
+                    res = await Call("POST", "/v1/open", body);
+                }
+                double random;
+                try { random = _random(); } catch { random = 0; }
+                lock (_gate)
+                {
+                    if (StraitCore.ShouldRetryReport(res.Status)) _holdUntil = Now() + StraitCore.RetryDelayMs(++_failures, res.RetryAfter, random);
+                    else { _failures = 0; _holdUntil = 0; }
+                }
+                return res.Status;
             }
             catch { return null; }
         }
@@ -872,7 +912,7 @@ namespace Strait
             return status;
         }
 
-        /// <summary>Send the saved reports in order; stop at the first one that gets no answer.</summary>
+        /// <summary>Send the saved reports in order; stop at the first one that gets no answer, a 429 or a 5xx. Nothing while held (C1).</summary>
         private Task Flush()
         {
             TaskCompletionSource<bool> done;
@@ -892,15 +932,15 @@ namespace Strait
             {
                 await Serial(async () =>
                 {
+                    lock (_gate) if (Now() < _holdUntil) return true; // C1: the server asked us to wait
                     var keep = new List<Dictionary<string, object?>>();
-                    bool offline = false;
+                    bool stop = false;
                     foreach (var rep in Prune(await ReadQueue()))
                     {
-                        // Once one gets no answer at all, keep the rest for later.
-                        if (offline) { keep.Add(rep); continue; }
-                        var status = await SendReport(rep);
-                        offline = status == null;
-                        if (StraitCore.ShouldRetryReport(status)) keep.Add(rep);
+                        // Once one gets no answer, a 429 or a 5xx, keep the rest for later.
+                        if (stop) { keep.Add(rep); continue; }
+                        stop = StraitCore.ShouldRetryReport(await SendReport(rep));
+                        if (stop) keep.Add(rep);
                     }
                     await WriteQueue(keep);
                     return true;
@@ -926,14 +966,17 @@ namespace Strait
             public bool Ok;
             public int Status;
             public Dictionary<string, object?> Json;
+            public string? RetryAfter;
         }
 
         /// <summary>Throws on transport failure; an unparseable body becomes an empty object.</summary>
         private async Task<Response> Call(string method, string path, List<KeyValuePair<string, object?>>? body)
         {
             var json = body == null ? null : StraitJson.Serialize(body);
-            var (status, text) = await _transport.SendAsync(method, _base + path, json);
-            return new Response { Ok = status >= 200 && status < 300, Status = status, Json = StraitJson.ParseObjectOrEmpty(text) };
+            int status; string text; string? retryAfter = null;
+            if (_transport is IStraitRetryAfterTransport t) (status, text, retryAfter) = await t.SendWithRetryAfterAsync(method, _base + path, json);
+            else (status, text) = await _transport.SendAsync(method, _base + path, json);
+            return new Response { Ok = status >= 200 && status < 300, Status = status, Json = StraitJson.ParseObjectOrEmpty(text), RetryAfter = retryAfter };
         }
 
         private static void SetDestination(LinkEvent ev, string? url)

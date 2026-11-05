@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -444,6 +445,31 @@ namespace Strait
 
         public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
 
+        /// <summary>C1 backoff: the first hold after a 429/5xx is 15-30 s; each one in a row doubles it, up to <see cref="RetryMaxMs"/>.</summary>
+        public const long RetryBaseMs = 30_000;
+        /// <summary>C1 backoff: never hold the queue longer than 1 hour (Retry-After included).</summary>
+        public const long RetryMaxMs = 3_600_000;
+
+        /// <summary>
+        /// How long to hold the open/event queue after the <paramref name="failures"/>-th 429/5xx answer in a row
+        /// (contract B14, C1). Exponential with equal jitter: step = min(RetryMaxMs, RetryBaseMs × 2^(failures−1)),
+        /// wait floor(step/2 + random × step/2), so phones that failed together spread out. A Retry-After in whole
+        /// seconds (1-9 ASCII digits, spaces trimmed; an HTTP date or anything else is ignored) is a floor. The
+        /// result never exceeds RetryMaxMs. <paramref name="random"/> is in [0, 1].
+        /// </summary>
+        public static long RetryDelayMs(int failures, string? retryAfter, double random)
+        {
+            int n = Math.Min(Math.Max(failures, 1), 17);
+            double half = Math.Min(RetryMaxMs, RetryBaseMs << (n - 1)) / 2.0;
+            double r = double.IsNaN(random) ? 0 : Math.Min(Math.Max(random, 0), 1);
+            long backoff = (long)Math.Floor(half + r * half);
+            var t = retryAfter?.Trim();
+            long server = t != null && Regex.IsMatch(t, @"\A[0-9]{1,9}\z")
+                ? Math.Min(long.Parse(t, NumberStyles.None, CultureInfo.InvariantCulture), RetryMaxMs / 1000) * 1000
+                : 0;
+            return Math.Min(RetryMaxMs, Math.Max(backoff, server));
+        }
+
         private const string OpenIdChars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
         /// <summary>
@@ -483,7 +509,7 @@ namespace Strait
         }
 
         private static readonly Random Rng = new Random();
-        private static double DefaultRandom() { lock (Rng) return Rng.NextDouble(); }
+        internal static double DefaultRandom() { lock (Rng) return Rng.NextDouble(); }
 
         /// <summary>JS <c>n.toString(36)</c> for an integer.</summary>
         internal static string ToBase36(long n)

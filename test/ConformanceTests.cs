@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(10, v.GetProperty("version").GetInt32());
+            Assert.Equal(11, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -259,6 +259,20 @@ namespace Strait.Tests
                 var st = c.GetProperty("status");
                 int? status = st.ValueKind == JsonValueKind.Null ? (int?)null : st.GetInt32();
                 Assert.True(c.GetProperty("expected").GetBoolean() == StraitCore.ShouldRetryReport(status), $"status={status}");
+            }
+        }
+
+        [Fact]
+        public void RetryDelayVectors()
+        {
+            var cases = Vectors().GetProperty("retryDelay");
+            Assert.True(cases.GetArrayLength() >= 21);
+            foreach (var c in cases.EnumerateArray())
+            {
+                var ra = c.GetProperty("retryAfter");
+                var got = StraitCore.RetryDelayMs(c.GetProperty("failures").GetInt32(),
+                    ra.ValueKind == JsonValueKind.Null ? null : ra.GetString(), c.GetProperty("random").GetDouble());
+                Assert.True(c.GetProperty("expected").GetInt64() == got, $"{c.GetProperty("name").GetString()}: got {got}");
             }
         }
 
