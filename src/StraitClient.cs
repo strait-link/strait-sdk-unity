@@ -182,6 +182,8 @@ namespace Strait
         public const string QueueKey = "strait.pendingOpens";
         /// <summary>Storage key of the remembered tap (contract B15): <c>{"clickId":…,"at":…}</c>, or empty.</summary>
         public const string TapKey = "strait.lastTap";
+        /// <summary>Storage key of the opt-out switch (<see cref="SetEnabled"/>): "0" = off; absent or unreadable = on.</summary>
+        public const string EnabledKey = "strait.enabled";
 
         private readonly StraitConfig _config;
         private readonly string _base;
@@ -204,6 +206,10 @@ namespace Strait
         /// <summary>A direct link arrived in this launch (B6: the first-launch check then stays quiet).</summary>
         private volatile bool _directArrived;
         private volatile bool _stopped;
+        /// <summary>Opt-out switch, read from storage once (unreadable = on); a SetEnabled during the read wins.</summary>
+        private bool? _enabled;
+        /// <summary>1 = the first-launch check was skipped because the SDK was off: SetEnabled(true) runs it (once: Interlocked).</summary>
+        private int _deferredDue;
 
         public StraitClient(StraitConfig config)
         {
@@ -278,11 +284,26 @@ namespace Strait
             }
             else if (firstLaunch)
             {
-                // Marked done only once the engine answered: offline → next launch.
-                var e = await RunDeferred(true);
-                if (e.Reason != "network") await SetFlag();
+                if (await IsEnabled()) await FirstCheck();
+                else
+                {
+                    // Opted out: not marked done, runs when switched back on (or now, if that just happened).
+                    Interlocked.Exchange(ref _deferredDue, 1);
+                    if (await IsEnabled() && Interlocked.Exchange(ref _deferredDue, 0) == 1) await FirstCheck();
+                }
             }
             _ = Flush();
+        }
+
+        /// <summary>
+        /// The once-per-install check; marked done only once the engine answered (offline → next launch;
+        /// switched off meanwhile → when back on).
+        /// </summary>
+        private async Task FirstCheck()
+        {
+            var e = await RunDeferred(true);
+            if (e.Reason == "disabled") Interlocked.Exchange(ref _deferredDue, 1);
+            else if (e.Reason != "network") await SetFlag();
         }
 
         private async Task SetFlag()
@@ -377,6 +398,11 @@ namespace Strait
                     ev.Matched = false;
                     ev.Reason = "not_handoff";
                 }
+                else if (!await IsEnabled())
+                {
+                    ev.Matched = false;
+                    ev.Reason = "disabled";
+                }
                 else
                 {
                     var res = await Claim(token, id, t0);
@@ -399,6 +425,50 @@ namespace Strait
 
         /// <summary>Send saved open reports now (also happens on Start and when the app becomes active).</summary>
         public Task FlushOpenReports() => Flush();
+
+        /// <summary>
+        /// Opt-out switch for consent flows (default on, kept in <see cref="StraitConfig.Storage"/> across launches as
+        /// <c>strait.enabled</c>). Off: no open reports, no events, no deferred or clipboard matching, nothing
+        /// remembered; reports saved earlier and the remembered tap are deleted. A link that carries its own destination
+        /// still reaches OnLink; a short link is looked up through /v1/lookup, which records nothing (no tap, no open,
+        /// no tap id), so it still routes (reason "disabled" only if that lookup fails). Back on: sending resumes, and a
+        /// first-launch check skipped while off runs now. Never throws.
+        /// </summary>
+        public async Task SetEnabled(bool enabled)
+        {
+            lock (_gate) _enabled = enabled;
+            try { await _storage.SetItemAsync(EnabledKey, enabled ? "1" : "0"); }
+            catch { /* best effort: this launch still honours it */ }
+            if (!enabled)
+            {
+                // Opting out also deletes what was saved to send later.
+                await Serial(async () => { await WriteQueue(new List<Dictionary<string, object?>>()); return true; });
+                Task tap;
+                lock (_tapGate) { tap = _tapWrite = ClearTap(_tapWrite); }
+                await tap;
+                return;
+            }
+            if (Interlocked.Exchange(ref _deferredDue, 0) == 1) await FirstCheck();
+            _ = Flush();
+
+            async Task ClearTap(Task prev)
+            {
+                try { await prev; } catch { }
+                try { await _storage.SetItemAsync(TapKey, ""); } catch { /* best effort */ }
+            }
+        }
+
+        /// <summary>The opt-out switch's current value (see <see cref="SetEnabled"/>). Unreadable storage = on.</summary>
+        public async Task<bool> IsEnabled()
+        {
+            bool? known;
+            lock (_gate) known = _enabled;
+            if (known.HasValue) return known.Value;
+            string? v;
+            try { v = await _storage.GetItemAsync(EnabledKey); }
+            catch { v = null; }
+            lock (_gate) return _enabled ??= v != "0";
+        }
 
         // ------------------------------------------------------------------ fingerprint + events
 
@@ -436,6 +506,7 @@ namespace Strait
         {
             try
             {
+                if (!await IsEnabled()) return false;
                 Task pending;
                 lock (_tapGate) pending = _tapWrite;
                 await pending;
@@ -477,7 +548,8 @@ namespace Strait
             async Task Write(Task prev)
             {
                 try { await prev; } catch { }
-                try { await _storage.SetItemAsync(TapKey, value); } catch { /* best effort */ }
+                // Checked inside the chain: a reply that lands after SetEnabled(false) keeps no tap.
+                try { if (await IsEnabled()) await _storage.SetItemAsync(TapKey, value); } catch { /* best effort */ }
             }
         }
 
@@ -516,6 +588,7 @@ namespace Strait
             long t0 = Now();
             var id = StraitCore.NewOpenId(t0);
             var platform = _config.Platform;
+            bool on = await IsEnabled();
             Announce(new LinkStart { Id = id, Kind = "direct", AppState = appState, RawUrl = raw, At = t0 });
             var ev = new LinkEvent { Id = id, Kind = "direct", Route = LinkRoutes.AppLink, AppState = appState, RawUrl = raw, At = t0 };
             try
@@ -525,6 +598,10 @@ namespace Strait
                 {
                     ev.Matched = false;
                     ev.Reason = "invalid_url";
+                }
+                else if (c.NeedsResolve && !on)
+                {
+                    await LookupOnly(ev, raw);
                 }
                 else if (c.NeedsResolve)
                 {
@@ -564,15 +641,20 @@ namespace Strait
                     {
                         ev.Matched = false;
                         ev.Reason = "network";
-                        report["reason"] = "network";
-                        _ = Enqueue(report);
+                        // Switched off while the resolve was out (F4): route the way an opted-out tap does.
+                        if (!await IsEnabled()) await LookupOnly(ev, raw);
+                        else
+                        {
+                            report["reason"] = "network";
+                            _ = Enqueue(report);
+                        }
                     }
                 }
                 else
                 {
-                    if (c.ClickId != null) NoteTap(c.ClickId, t0);
+                    if (on && c.ClickId != null) NoteTap(c.ClickId, t0);
                     // Navigation never waits for the report.
-                    _ = Report(NewReport(id, "direct", c.Route, appState, platform, StraitCore.ReportUrl(c.Url), c.ClickId, true, firstLaunch, t0));
+                    if (on) _ = Report(NewReport(id, "direct", c.Route, appState, platform, StraitCore.ReportUrl(c.Url), c.ClickId, true, firstLaunch, t0));
                     ev.Route = c.Route;
                     ev.Matched = true;
                     ev.Url = c.Url;
@@ -590,6 +672,32 @@ namespace Strait
         }
 
         /// <summary>
+        /// Opted out: ask only where a short link goes (POST /v1/lookup records nothing; engine ADR 0083). Key + host +
+        /// path, no query; no open report, no tap kept, no retry. An engine without it (404) or no network: "disabled".
+        /// </summary>
+        private async Task LookupOnly(LinkEvent ev, string raw)
+        {
+            Dictionary<string, object?> json;
+            try
+            {
+                var url = StraitCore.ReportUrl(raw);
+                int q = url.IndexOf('?');
+                var res = await Call("POST", "/v1/lookup", new List<KeyValuePair<string, object?>>
+                {
+                    Kv("publishableKey", _config.PublishableKey),
+                    Kv("url", q < 0 ? url : url.Substring(0, q)),
+                }, lookupOnly: true);
+                json = res.Ok ? res.Json : new Dictionary<string, object?>();
+            }
+            catch { json = new Dictionary<string, object?>(); }
+            bool matched = IsTrue(json, "matched");
+            ev.Matched = matched;
+            ev.Reason = matched ? null : (Str(json, "reason") ?? "disabled");
+            if (matched) SetDestination(ev, Str(json, "longUrl"));
+            ev.LinkId = Str(json, "linkId");
+        }
+
+        /// <summary>
         /// The deferred check. <paramref name="record"/> (the once-per-install run) sends the openId
         /// so the engine records this first open + install exactly once; the debug re-check sends
         /// record:false instead, so the engine adds no install.
@@ -598,6 +706,8 @@ namespace Strait
         {
             long t0 = Now();
             var id = StraitCore.NewOpenId(t0);
+            if (!await IsEnabled())
+                return new LinkEvent { Id = id, Kind = "deferred", Route = LinkRoutes.Fingerprint, AppState = LinkAppStates.Closed, Matched = false, Reason = "disabled", At = t0 };
             bool Quiet() => record && _directArrived;
             // B6: once a link is here, no start signal: its event will not follow (see below),
             // and a loading state would never end.
@@ -672,7 +782,8 @@ namespace Strait
             // choice is unknown, so the clipboard stays untouched and the check runs again next launch.
             // Same openId as the match, so the install is counted once. Not once a link is here: the result
             // won't be delivered, so the read would show iOS's paste prompt for nothing (B6).
-            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios" && !Quiet())
+            // Switched off meanwhile: no clipboard read (iOS would show its paste prompt to an opted-out person).
+            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios" && !Quiet() && await IsEnabled())
             {
                 var token = await HandoffTokenFromClipboard(Quiet);
                 if (token != null)
@@ -805,6 +916,7 @@ namespace Strait
         private Task Enqueue(Dictionary<string, object?> report) =>
             Serial(async () =>
             {
+                if (!await IsEnabled()) return false;
                 var q = await ReadQueue();
                 q.Add(report);
                 await WriteQueue(Prune(q));
@@ -856,6 +968,7 @@ namespace Strait
             {
                 await Serial(async () =>
                 {
+                    if (!await IsEnabled()) return false;
                     var keep = new List<Dictionary<string, object?>>();
                     bool offline = false;
                     foreach (var rep in Prune(await ReadQueue()))
@@ -892,9 +1005,14 @@ namespace Strait
             public Dictionary<string, object?> Json;
         }
 
-        /// <summary>Throws on transport failure; an unparseable body becomes an empty object.</summary>
-        private async Task<Response> Call(string method, string path, List<KeyValuePair<string, object?>>? body)
+        /// <summary>
+        /// Every engine call goes through here (Doctor's public-file GET aside): while opted out nothing leaves the
+        /// device, except <paramref name="lookupOnly"/> (/v1/lookup: where a short link goes, recorded nowhere).
+        /// Throws on transport failure (and when opted out); an unparseable body becomes an empty object.
+        /// </summary>
+        private async Task<Response> Call(string method, string path, List<KeyValuePair<string, object?>>? body, bool lookupOnly = false)
         {
+            if (!lookupOnly && !await IsEnabled()) throw new InvalidOperationException("disabled");
             var json = body == null ? null : StraitJson.Serialize(body);
             var (status, text) = await _transport.SendAsync(method, _base + path, json);
             return new Response { Ok = status >= 200 && status < 300, Status = status, Json = StraitJson.ParseObjectOrEmpty(text) };
