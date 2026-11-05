@@ -3,12 +3,13 @@
 // The values must match what the browser saw at the tap: CSS screen.width (portrait), devicePixelRatio,
 // the locale and the IANA time zone. Not Screen.width, which follows render scaling and orientation.
 // iOS reads them through StraitDevice.mm (next to this file).
+#nullable enable // Assets/ compiles with nullable off; this keeps `string?` from warning (CS8632)
 using Strait;
 using UnityEngine;
 
 public static class StraitDevice
 {
-    public static DeviceFields Collect()
+    public static DeviceFields? Collect()
     {
 #if UNITY_ANDROID && !UNITY_EDITOR
         using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
