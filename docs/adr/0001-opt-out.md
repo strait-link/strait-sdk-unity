@@ -29,7 +29,9 @@ Five Strait SDKs had a switch; Unity had none, so a game with a consent screen c
   through `/v1/lookup`; nothing is queued.
 - First launch while off: the once-per-install check is not marked done; `SetEnabled(true)` runs it (the
   consent-screen-on-first-launch flow keeps its deferred link), else the next `Start`. Switched off during
-  the check: the call fails at the gate as "network", so it is not marked done either.
+  the check: the call fails at the gate as "network", so it is not marked done either, and the iPhone
+  clipboard (paste handoff) is not read (no paste prompt for an opted-out person). The "run it when back on"
+  flag is taken with `Interlocked.Exchange`, so two `SetEnabled(true)` calls can't run the check twice.
 - `CheckDeferred` and `ClaimHandoff` answer `Reason = "disabled"` with no call. `Doctor` (a GET of the public
   assetlinks / AASA file, no user data) still works.
 - No legacy stateless API exists in this SDK (the F5 lesson): every engine call is in `StraitClient`.

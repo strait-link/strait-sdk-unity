@@ -208,8 +208,8 @@ namespace Strait
         private volatile bool _stopped;
         /// <summary>Opt-out switch, read from storage once (unreadable = on); a SetEnabled during the read wins.</summary>
         private bool? _enabled;
-        /// <summary>The first-launch check was skipped because the SDK was off: SetEnabled(true) runs it.</summary>
-        private volatile bool _deferredDue;
+        /// <summary>1 = the first-launch check was skipped because the SDK was off: SetEnabled(true) runs it (once: Interlocked).</summary>
+        private int _deferredDue;
 
         public StraitClient(StraitConfig config)
         {
@@ -285,7 +285,12 @@ namespace Strait
             else if (firstLaunch)
             {
                 if (await IsEnabled()) await FirstCheck();
-                else _deferredDue = true; // opted out: not marked done, runs when switched back on
+                else
+                {
+                    // Opted out: not marked done, runs when switched back on (or now, if that just happened).
+                    Interlocked.Exchange(ref _deferredDue, 1);
+                    if (await IsEnabled() && Interlocked.Exchange(ref _deferredDue, 0) == 1) await FirstCheck();
+                }
             }
             _ = Flush();
         }
@@ -297,7 +302,7 @@ namespace Strait
         private async Task FirstCheck()
         {
             var e = await RunDeferred(true);
-            if (e.Reason == "disabled") _deferredDue = true;
+            if (e.Reason == "disabled") Interlocked.Exchange(ref _deferredDue, 1);
             else if (e.Reason != "network") await SetFlag();
         }
 
@@ -443,11 +448,7 @@ namespace Strait
                 await tap;
                 return;
             }
-            if (_deferredDue)
-            {
-                _deferredDue = false;
-                await FirstCheck();
-            }
+            if (Interlocked.Exchange(ref _deferredDue, 0) == 1) await FirstCheck();
             _ = Flush();
 
             async Task ClearTap(Task prev)
@@ -781,7 +782,8 @@ namespace Strait
             // choice is unknown, so the clipboard stays untouched and the check runs again next launch.
             // Same openId as the match, so the install is counted once. Not once a link is here: the result
             // won't be delivered, so the read would show iOS's paste prompt for nothing (B6).
-            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios" && !Quiet())
+            // Switched off meanwhile: no clipboard read (iOS would show its paste prompt to an opted-out person).
+            if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios" && !Quiet() && await IsEnabled())
             {
                 var token = await HandoffTokenFromClipboard(Quiet);
                 if (token != null)

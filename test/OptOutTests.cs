@@ -204,6 +204,52 @@ namespace Strait.Tests
         }
 
         [Fact]
+        public async Task SwitchingOffDeletesTheRememberedTap()
+        {
+            var e = Replying(p => p == "/v1/resolve"
+                ? (200, "{\"matched\":true,\"recorded\":true,\"longUrl\":\"https://shop.example/p/42\",\"clickId\":\"" + Click + "\"}")
+                : (202, "{}"));
+            var store = new MemoryKeyValueStore();
+            await store.SetItemAsync(StraitClient.DeferredFlag, "1");
+            var s = Make(e, store);
+            await s.Start(null);
+            await s.HandleUrl("https://acme.strait.link/sale");
+            await Settle();
+            Assert.Contains(Click, await Get(store, StraitClient.TapKey)); // remembered while on
+            await s.SetEnabled(false);
+            Assert.Equal("", await Get(store, StraitClient.TapKey));
+        }
+
+        private sealed class SpyClipboard : IStraitClipboard
+        {
+            public int Uses;
+            public Task<bool> HasProbableWebUrlAsync() { Uses++; return Task.FromResult(true); }
+            public Task<string?> ReadTextAsync() { Uses++; return Task.FromResult<string?>("https://acme.strait.link/h/AbCdEfGhIjKlMnOpQrStUv"); }
+        }
+
+        [Fact]
+        public async Task SwitchedOffDuringTheFirstLaunchCheckLeavesTheClipboardAlone()
+        {
+            StraitClient? client = null;
+            var engine = new Engine(async p =>
+            {
+                await client!.SetEnabled(false);
+                return (200, "{\"matched\":false,\"ios\":{\"pasteHandoff\":true}}");
+            });
+            var clip = new SpyClipboard();
+            client = new StraitClient(new StraitConfig
+            {
+                PublishableKey = PK, Endpoint = Endpoint, Storage = new MemoryKeyValueStore(), Platform = "ios",
+                DeviceFields = () => new DeviceFields { ScreenWidth = 390, PixelRatio = 3, Language = "en", Timezone = "Asia/Kolkata" },
+                Clipboard = clip, Transport = engine, Clock = () => T,
+            });
+            await client.Start(null);
+            await Settle();
+            Assert.Equal(0, clip.Uses); // no paste prompt for an opted-out person
+            Assert.Equal(new[] { "/v1/match" }, engine.Calls);
+        }
+
+        [Fact]
         public async Task PersistsAcrossLaunches()
         {
             var store = new MemoryKeyValueStore();
