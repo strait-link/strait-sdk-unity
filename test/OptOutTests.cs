@@ -222,9 +222,35 @@ namespace Strait.Tests
 
         private sealed class SpyClipboard : IStraitClipboard
         {
-            public int Uses;
-            public Task<bool> HasProbableWebUrlAsync() { Uses++; return Task.FromResult(true); }
-            public Task<string?> ReadTextAsync() { Uses++; return Task.FromResult<string?>("https://acme.strait.link/h/AbCdEfGhIjKlMnOpQrStUv"); }
+            public int Uses, Detects, Reads;
+            /// <summary>Runs inside the prompt-free detect, before it answers.</summary>
+            public Func<Task>? DuringDetect;
+            public async Task<bool> HasProbableWebUrlAsync()
+            {
+                Uses++; Detects++;
+                if (DuringDetect != null) await DuringDetect();
+                return true;
+            }
+            public Task<string?> ReadTextAsync() { Uses++; Reads++; return Task.FromResult<string?>("https://acme.strait.link/h/AbCdEfGhIjKlMnOpQrStUv"); }
+        }
+
+        [Fact]
+        public async Task SwitchedOffBetweenTheDetectAndTheReadDoesNotRead()
+        {
+            var engine = new Engine(_ => Task.FromResult((200, "{\"matched\":false,\"ios\":{\"pasteHandoff\":true}}")));
+            var clip = new SpyClipboard();
+            var client = new StraitClient(new StraitConfig
+            {
+                PublishableKey = PK, Endpoint = Endpoint, Storage = new MemoryKeyValueStore(), Platform = "ios",
+                DeviceFields = () => new DeviceFields { ScreenWidth = 390, PixelRatio = 3, Language = "en", Timezone = "Asia/Kolkata" },
+                Clipboard = clip, Transport = engine, Clock = () => T,
+            });
+            clip.DuringDetect = () => client.SetEnabled(false);
+            await client.Start(null);
+            await Settle();
+            Assert.Equal(1, clip.Detects);
+            Assert.Equal(0, clip.Reads); // no paste prompt for an opted-out person
+            Assert.Equal(new[] { "/v1/match" }, engine.Calls);
         }
 
         [Fact]

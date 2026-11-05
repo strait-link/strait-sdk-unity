@@ -458,6 +458,12 @@ namespace Strait
             }
         }
 
+        /// <summary>Known to be off right now (no storage read; for synchronous checks such as the clipboard skip).</summary>
+        private bool SwitchedOff()
+        {
+            lock (_gate) return _enabled == false;
+        }
+
         /// <summary>The opt-out switch's current value (see <see cref="SetEnabled"/>). Unreadable storage = on.</summary>
         public async Task<bool> IsEnabled()
         {
@@ -785,7 +791,7 @@ namespace Strait
             // Switched off meanwhile: no clipboard read (iOS would show its paste prompt to an opted-out person).
             if (!ev.Matched && record && pasteHandoff && _config.Platform == "ios" && !Quiet() && await IsEnabled())
             {
-                var token = await HandoffTokenFromClipboard(Quiet);
+                var token = await HandoffTokenFromClipboard(() => Quiet() || SwitchedOff());
                 if (token != null)
                 {
                     try

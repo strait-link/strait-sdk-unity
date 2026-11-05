@@ -9,7 +9,8 @@
   (`strait.enabled`); default on, so nothing changes for existing games. Links that carry their own
   destination still reach `OnLink`; a Strait short link is looked up through `POST /v1/lookup`, which records
   nothing (key + host + path only), so it still routes (`reason "disabled"` only if that lookup fails). A first
-  launch while off keeps its deferred check due: `SetEnabled(true)` runs it. Same contract as the React Native,
+  launch while off keeps its deferred check due: `SetEnabled(true)` runs it. Switched off during that check, the
+  iPhone clipboard (paste handoff) is not read, so no paste prompt. Same contract as the React Native,
   Android, Swift, Flutter and web SDKs (ADR `docs/adr/0001-opt-out.md`).
 
 ## 0.8.7
