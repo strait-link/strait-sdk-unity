@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 11,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -1420,6 +1420,155 @@
       "expected": true
     }
   ],
+  "retryDelay": [
+    {
+      "name": "first failure, shortest jitter",
+      "failures": 1,
+      "retryAfter": null,
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "first failure, middle jitter",
+      "failures": 1,
+      "retryAfter": null,
+      "random": 0.5,
+      "expected": 22500
+    },
+    {
+      "name": "first failure, longest jitter",
+      "failures": 1,
+      "retryAfter": null,
+      "random": 0.999999,
+      "expected": 29999
+    },
+    {
+      "name": "second failure doubles",
+      "failures": 2,
+      "retryAfter": null,
+      "random": 0,
+      "expected": 30000
+    },
+    {
+      "name": "third failure, quarter jitter",
+      "failures": 3,
+      "retryAfter": null,
+      "random": 0.25,
+      "expected": 75000
+    },
+    {
+      "name": "seventh failure",
+      "failures": 7,
+      "retryAfter": null,
+      "random": 0,
+      "expected": 960000
+    },
+    {
+      "name": "eighth failure reaches the 1 h cap",
+      "failures": 8,
+      "retryAfter": null,
+      "random": 0,
+      "expected": 1800000
+    },
+    {
+      "name": "eighth failure, full jitter = the cap",
+      "failures": 8,
+      "retryAfter": null,
+      "random": 1,
+      "expected": 3600000
+    },
+    {
+      "name": "many failures stay at the cap",
+      "failures": 50,
+      "retryAfter": null,
+      "random": 0.5,
+      "expected": 2700000
+    },
+    {
+      "name": "zero failures count as one",
+      "failures": 0,
+      "retryAfter": null,
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "Retry-After longer than the backoff wins",
+      "failures": 1,
+      "retryAfter": "120",
+      "random": 0,
+      "expected": 120000
+    },
+    {
+      "name": "Retry-After shorter than the backoff: the backoff",
+      "failures": 1,
+      "retryAfter": "5",
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "Retry-After with spaces",
+      "failures": 1,
+      "retryAfter": " 90 ",
+      "random": 0,
+      "expected": 90000
+    },
+    {
+      "name": "Retry-After 0",
+      "failures": 2,
+      "retryAfter": "0",
+      "random": 0.5,
+      "expected": 45000
+    },
+    {
+      "name": "Retry-After above 1 h is capped",
+      "failures": 1,
+      "retryAfter": "7200",
+      "random": 0,
+      "expected": 3600000
+    },
+    {
+      "name": "Retry-After of 9 digits is capped",
+      "failures": 1,
+      "retryAfter": "999999999",
+      "random": 0,
+      "expected": 3600000
+    },
+    {
+      "name": "Retry-After of 10 digits is ignored",
+      "failures": 1,
+      "retryAfter": "1234567890",
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "Retry-After as an HTTP date is ignored",
+      "failures": 1,
+      "retryAfter": "Wed, 21 Oct 2026 07:28:00 GMT",
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "Retry-After negative is ignored",
+      "failures": 1,
+      "retryAfter": "-5",
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "Retry-After with a fraction is ignored",
+      "failures": 1,
+      "retryAfter": "1.5",
+      "random": 0,
+      "expected": 15000
+    },
+    {
+      "name": "Retry-After empty is ignored",
+      "failures": 1,
+      "retryAfter": "",
+      "random": 0,
+      "expected": 15000
+    }
+  ],
   "eventClickId": [
     {
       "name": "attaches the remembered tap within the window",
@@ -2093,6 +2242,162 @@
     {
       "shortestSide": -1,
       "expected": null
+    }
+  ],
+  "firstLaunchState": [
+    {
+      "name": "normal launch",
+      "flag": "1",
+      "stored": "1790000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "app updated from an SDK without installTime: adopt, not a new install",
+      "flag": "1",
+      "stored": null,
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "stored empty string counts as never written",
+      "flag": "1",
+      "stored": "",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "storage restored from a backup of another install: run again",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": true,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "install time unknown: the flag alone",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": null,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "install time unknown, nothing stored",
+      "flag": "1",
+      "stored": null,
+      "installTime": null,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "first launch",
+      "flag": null,
+      "stored": null,
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "first launch, flag empty (cleared by a restore)",
+      "flag": "",
+      "stored": "1790000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "first launch after a restore cleared the flag, time not yet written",
+      "flag": "",
+      "stored": "1780000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": "1790000000000"
+      }
+    },
+    {
+      "name": "first launch, install time unknown",
+      "flag": null,
+      "stored": null,
+      "installTime": null,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "fraction of a ms is truncated",
+      "flag": "1",
+      "stored": "1790000000000",
+      "installTime": 1790000000000.75,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "zero install time = unknown",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": 0,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "negative install time = unknown",
+      "flag": "1",
+      "stored": "1780000000000",
+      "installTime": -5,
+      "expected": {
+        "firstLaunch": false,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
+    },
+    {
+      "name": "flag other than \"1\" = not checked",
+      "flag": "true",
+      "stored": "1790000000000",
+      "installTime": 1790000000000,
+      "expected": {
+        "firstLaunch": true,
+        "clearFlag": false,
+        "storeInstallTime": null
+      }
     }
   ]
 }

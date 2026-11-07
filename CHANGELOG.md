@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 (7 Nov 2026)
 
 - New opt-out switch for consent flows (India's DPDP Act, GDPR): `await Client.SetEnabled(false)` until the
   person agrees, `SetEnabled(true)` after, `IsEnabled()` reads it. While off the SDK sends no open reports or
@@ -12,6 +12,24 @@
   launch while off keeps its deferred check due: `SetEnabled(true)` runs it. Switched off during that check, the
   iPhone clipboard (paste handoff) is not read, so no paste prompt. Same contract as the React Native,
   Android, Swift, Flutter and web SDKs (ADR `docs/adr/0001-opt-out.md`).
+- Fix: reinstalls from a link are no longer lost. Android Auto Backup and restored iPhones put back
+  PlayerPrefs, and with it the "deferred check done" flag, so a reinstall skipped its deferred link and
+  was never counted. New optional `StraitConfig.InstallTime` (`Func<long?>`, Unix ms): the SDK stores it
+  as `strait.installTime` and runs the check again when it changed; an update, or a game updated from an
+  older SDK, is never a new install (contract B6a, shared-spec ADR 0003). The Quick start sample's
+  `StraitDevice.InstallTime` reads `PackageInfo.firstInstallTime` on Android and a backup-excluded
+  marker file on iOS. New `StraitCore.FirstLaunchState`.
+- New: `TrackEvent(..., eventId: order.Id)`; the engine stores each eventId once. Left out, the SDK makes
+  one (`StraitCore.NewEventId`), so a retry never counts twice. Events that can't be sent (offline, 429,
+  5xx) are kept in the open-report queue and sent later; `PendingOpenReports()` counts them (contract
+  B13a, ADR 0004).
+- Fix: when the server is busy (429 or 5xx) the saved queue no longer sends its whole backlog on
+  every foreground. A flush stops at the first 429/5xx and the queue waits 15–30 s, doubling each
+  time in a row up to 1 hour, and at least the server's `Retry-After` (contract B14 backoff, C1,
+  shared-spec ADR 0005). New opens and events are still sent once when they happen. New
+  `StraitCore.RetryDelayMs`; the default transport passes `Retry-After`, and a custom one can too by
+  implementing `IStraitRetryAfterTransport` (the README's WebGL `UnityWebRequestTransport` does).
+- Conformance vectors v11 (`firstLaunchState`, `retryDelay`).
 
 ## 0.8.7
 

@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.8.7**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.9.0**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -81,7 +81,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.8.7
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.0
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -112,6 +112,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B3 | Short-link hosts (endpoint + `LinkHosts`, via `NormalizeLinkHosts`) → `POST /v1/resolve {publishableKey,url,platform}` | ✓ |
 | B4 | `ClassifyUrl` (custom scheme → `https://host/path?q`; `strait_click` tap id removed via `TakeClickId`, returned as `ClickId`) | ✓ |
 | B5 | `closed` for the launch URL, else `AppStateTracker` (2000 / 1000 ms) | ✓ |
+| B6a | Reinstall-safe first open: `StraitConfig.InstallTime` stored as `strait.installTime`; a changed install time clears the restored flag and runs the check again (`StraitCore.FirstLaunchState`, vectors v11) | ✓ (the game supplies it, see below) |
 | B6 | Deferred check once per install (`strait.deferredChecked`), skipped but marked when launched by a link; marked only once the engine answered (no answer / 429 / 5xx → `reason:"network"`, retried next launch); `CheckDeferred()` sends no `openId` | ✓ |
 | B7 | Android: referrer `strait_link` → `/v1/referrer {linkId, clickId, openId, at}`, else or on a miss → `/v1/match` (same `openId`) | ✓ (the game supplies the referrer) |
 | B8 | iOS: `/v1/match` with device fields + `openId`, `at` | ✓ |
@@ -120,7 +121,8 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B11 | All JSON goes through an escaping writer | ✓ |
 | B12 | `SplitUrl` matches the vectors exactly (no `System.Uri`) | ✓ |
 | B13 | `TrackEvent`, `ReportFingerprint` (origin `app`), `CompareFingerprint` | ✓ |
-| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
+| B13a | `TrackEvent(eventId:)` (else `StraitCore.NewEventId`); no answer / 429 / 5xx → saved in `strait.pendingOpens` (`"type":"event"`, no key) and flushed to `/v1/event` | ✓ |
+| B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; a 429/5xx stops the flush and holds the queue (`StraitCore.RetryDelayMs`, `Retry-After`, C1); `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
@@ -145,7 +147,9 @@ Reports that can't be sent (offline, server busy) are saved in `Storage` (the sa
 store as the deferred flag, e.g. `PlayerPrefsStore`) and retried on the next `Start`,
 whenever `OnAppState("active")` is called (so wire `OnApplicationPause` /
 `OnApplicationFocus` as shown below), and after any report that gets through, for up
-to 7 days (max 100). The engine de-duplicates by open id, so nothing is counted twice.
+to 7 days (max 100). When the server is busy (429 or 5xx) the SDK waits before
+sending the saved ones again: 15–30 s, doubling each time in a row up to 1 hour, and at
+least as long as the server's `Retry-After`. The engine de-duplicates by open id, so nothing is counted twice.
 Navigation never waits for a report. The first launch of an install is marked as
 such, so dashboards can tell **new users** (installed and opened) from **existing
 users** (already had the game). The deferred check is only marked done once the
@@ -176,6 +180,7 @@ public class StraitLinks : MonoBehaviour
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
             DeviceFields = StraitDevice.Collect,
             DeviceClass = StraitDevice.Class,          // phone / tablet on open reports (see Device fields)
+            InstallTime = StraitDevice.InstallTime,    // reinstalls from a link (see Reinstalls and backups)
             InstallReferrer = Application.platform == RuntimePlatform.Android ? PlayReferrer.Get : null,
             // Transport = new UnityWebRequestTransport(),   // required on WebGL (no HttpClient there)
         });
@@ -206,6 +211,19 @@ public class StraitLinks : MonoBehaviour
 }
 ```
 
+### Reinstalls and backups (`InstallTime`, contract B6a)
+
+`PlayerPrefs` is backed up: Android Auto Backup (on by default) puts it back when the game is installed
+again, and restored or new iPhones bring it back too. Without `InstallTime` the restored "deferred check
+done" flag makes a reinstall from a link skip its deferred link and go uncounted. With it, the SDK stores the
+install time next to the flag (`strait.installTime`) and runs the check again when the install time changed.
+An update keeps its install time, so it never counts as a new install, and a game updated from an older SDK
+adopts the time without a new check. `StraitDevice.InstallTime` (below, also in the Quick start sample)
+reads `PackageInfo.firstInstallTime` on Android and, on iOS (no install-time API), a marker file in a
+backup-excluded `Library/Application Support/Strait/` folder. Left out, or when it returns null or throws,
+the flag works alone as before. Optional extra on Android: exclude the PlayerPrefs file from backup in your
+`dataExtractionRules` / `fullBackupContent`.
+
 Call `Start` and `HandleUrl` from the main thread. The client awaits without
 `ConfigureAwait(false)`, so `OnLink` and `OnLinkStart` fire on Unity's main thread, and
 `PlayerPrefs` is only touched there. A subscriber that throws is isolated: it cannot
@@ -214,7 +232,7 @@ break link handling or other subscribers.
 Analytics and the debug fingerprint check:
 
 ```csharp
-await StraitLinks.Client.TrackEvent("purchase", value: 4.99, currency: "USD", linkId: lastLink?.LinkId);
+await StraitLinks.Client.TrackEvent("purchase", value: 4.99, currency: "USD", linkId: lastLink?.LinkId, eventId: order.Id);
 var mine = await StraitLinks.Client.ReportFingerprint();    // Dictionary<string, object?>, or null when offline
 var cmp  = await StraitLinks.Client.CompareFingerprint();   // the engine's app-vs-browser comparison
 ```
@@ -224,6 +242,13 @@ can place the revenue on that tap's channel and A/B variant (contracts B15/B16).
 attributed open supplies one: a browser hand-off, a Play install, or the engine's reply to a
 verified short link or a deferred match. A newer open replaces the older tap. Pass `clickId:`
 to set it yourself.
+
+`eventId:` is your id for the conversion (your order id; 1-64 of `A-Z a-z 0-9 _ . : -`): Strait stores each
+one once, so a retry or a second report of the same order never counts twice. Left out, the SDK makes one.
+An event that can't be sent (offline, 429 or a server error) is kept with the saved open reports in
+`strait.pendingOpens` and sent later, for up to 7 days (on `Start`, when the game comes back to the front, or
+after the next report that gets through); `TrackEvent` then returns `false`, and `PendingOpenReports()`
+counts it. The tap id is chosen when you call, not at retry time. Refunds are not supported yet (contract B13a). Revenue you must trust (billing, payouts) belongs on your server with the secret key: the app's publishable key is public, so anyone who can guess an order id could send it first.
 
 ### Check your setup (doctor)
 
@@ -330,6 +355,38 @@ public static class StraitDevice
         return StraitCore.DeviceClassForModel(SystemInfo.deviceModel);              // "iPad13,4" -> tablet
 #else
         return null;                            // editor / desktop: not sent
+#endif
+    }
+
+    /// <summary>
+    /// The game's install time in Unix ms (contract B6a): PlayerPrefs comes back from Android Auto Backup and iPhone
+    /// backups, and with it the "deferred check done" flag; a changed install time tells the SDK this is a new install.
+    /// Android: PackageInfo.firstInstallTime (an update keeps it). iOS has no install-time API: a marker file in
+    /// Library/Application Support/Strait, excluded from backup, holds the time it was created, so a restored or new
+    /// iPhone (no marker) gets a new time. A throw is fine: the SDK treats it as unknown.
+    /// </summary>
+    public static long? InstallTime()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+        using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+        using var pm = activity.Call<AndroidJavaObject>("getPackageManager");
+        using var info = pm.Call<AndroidJavaObject>("getPackageInfo", activity.Call<string>("getPackageName"), 0);
+        return info.Get<long>("firstInstallTime");
+#elif UNITY_IOS && !UNITY_EDITOR
+        // persistentDataPath is <app>/Documents; Library is its sibling. The time is kept inside the file, so it
+        // doesn't depend on how the runtime reports file creation times.
+        var dir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Application.persistentDataPath), "Library", "Application Support", "Strait");
+        var file = System.IO.Path.Combine(dir, "install-time");
+        if (System.IO.File.Exists(file) && long.TryParse(System.IO.File.ReadAllText(file), out var saved)) return saved;
+        System.IO.Directory.CreateDirectory(dir);
+        UnityEngine.iOS.Device.SetNoBackupFlag(dir);
+        var now = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        System.IO.File.WriteAllText(file, now.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        UnityEngine.iOS.Device.SetNoBackupFlag(file);
+        return now;
+#else
+        return null;                            // editor / desktop: the once-per-install flag alone
 #endif
     }
 
@@ -470,14 +527,21 @@ public static class PlayReferrer
 ### WebGL: UnityWebRequest transport
 
 `HttpClient` does not work on WebGL. Supply a transport there. It must throw on network
-failure, which the client reports as `reason: "network"`:
+failure, which the client reports as `reason: "network"`, and should return the `Retry-After`
+header so a busy server's wait is respected (`IStraitRetryAfterTransport`):
 
 ```csharp
-public sealed class UnityWebRequestTransport : IStraitTransport
+public sealed class UnityWebRequestTransport : IStraitRetryAfterTransport
 {
-    public Task<(int Status, string Body)> SendAsync(string method, string url, string json)
+    public async Task<(int Status, string Body)> SendAsync(string method, string url, string json)
     {
-        var tcs = new TaskCompletionSource<(int, string)>();
+        var (status, body, _) = await SendWithRetryAfterAsync(method, url, json);
+        return (status, body);
+    }
+
+    public Task<(int Status, string Body, string RetryAfter)> SendWithRetryAfterAsync(string method, string url, string json)
+    {
+        var tcs = new TaskCompletionSource<(int, string, string)>();
         var req = new UnityEngine.Networking.UnityWebRequest(url, method)
             { downloadHandler = new UnityEngine.Networking.DownloadHandlerBuffer() };
         if (json != null)
@@ -490,7 +554,7 @@ public sealed class UnityWebRequestTransport : IStraitTransport
             if (req.result == UnityEngine.Networking.UnityWebRequest.Result.ConnectionError)
                 tcs.TrySetException(new Exception(req.error));
             else
-                tcs.TrySetResult(((int)req.responseCode, req.downloadHandler.text ?? ""));
+                tcs.TrySetResult(((int)req.responseCode, req.downloadHandler.text ?? "", req.GetResponseHeader("Retry-After")));
             req.Dispose();
         };
         return tcs.Task;
@@ -506,13 +570,13 @@ Links that carry their own destination still open your screens. A Strait short l
 ## API summary
 
 - `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `DeviceClassForSize`, `DeviceClassForModel`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
-  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `NewOpenId`
+  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `RetryDelayMs`, `NewOpenId`, `NewEventId`, `FirstLaunchState`
   (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId, clickId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `SetEnabled(enabled)`, `IsEnabled()`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId, clickId, eventId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `SetEnabled(enabled)`, `IsEnabled()`, `Stop()`.
 - `Doctor`: `Findings(publishableKey, endpoint, platform, appId, certSha256, file)` (pure, B23) → `DoctorReport {Ok, Findings}` of `DoctorFinding {Id, Severity, Title, Fix}`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the React Native SDK's fields and wire values, minus `referralCode`.

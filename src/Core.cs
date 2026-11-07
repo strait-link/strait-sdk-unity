@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -46,6 +47,21 @@ namespace Strait
         public string Host { get; }
         public string Path { get; }
         public IReadOnlyDictionary<string, string> Params { get; }
+    }
+
+    /// <summary>What <see cref="StraitClient.Start"/> does with the once-per-install flag (contract B6a, shared-spec ADR 0003).</summary>
+    public sealed class FirstLaunchStateResult
+    {
+        public FirstLaunchStateResult(bool firstLaunch, bool clearFlag, string? storeInstallTime)
+        {
+            FirstLaunch = firstLaunch; ClearFlag = clearFlag; StoreInstallTime = storeInstallTime;
+        }
+        /// <summary>Run the once-per-install deferred check / count this launch as the install's first.</summary>
+        public bool FirstLaunch { get; }
+        /// <summary>Set <c>strait.deferredChecked</c> to "" first: the storage came back from another install.</summary>
+        public bool ClearFlag { get; }
+        /// <summary>Then write this to <c>strait.installTime</c> (null = leave it).</summary>
+        public string? StoreInstallTime { get; }
     }
 
     /// <summary>
@@ -429,6 +445,31 @@ namespace Strait
 
         public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
 
+        /// <summary>C1 backoff: the first hold after a 429/5xx is 15-30 s; each one in a row doubles it, up to <see cref="RetryMaxMs"/>.</summary>
+        public const long RetryBaseMs = 30_000;
+        /// <summary>C1 backoff: never hold the queue longer than 1 hour (Retry-After included).</summary>
+        public const long RetryMaxMs = 3_600_000;
+
+        /// <summary>
+        /// How long to hold the open/event queue after the <paramref name="failures"/>-th 429/5xx answer in a row
+        /// (contract B14, C1). Exponential with equal jitter: step = min(RetryMaxMs, RetryBaseMs × 2^(failures−1)),
+        /// wait floor(step/2 + random × step/2), so phones that failed together spread out. A Retry-After in whole
+        /// seconds (1-9 ASCII digits, spaces trimmed; an HTTP date or anything else is ignored) is a floor. The
+        /// result never exceeds RetryMaxMs. <paramref name="random"/> is in [0, 1].
+        /// </summary>
+        public static long RetryDelayMs(int failures, string? retryAfter, double random)
+        {
+            int n = Math.Min(Math.Max(failures, 1), 17);
+            double half = Math.Min(RetryMaxMs, RetryBaseMs << (n - 1)) / 2.0;
+            double r = double.IsNaN(random) ? 0 : Math.Min(Math.Max(random, 0), 1);
+            long backoff = (long)Math.Floor(half + r * half);
+            var t = retryAfter?.Trim();
+            long server = t != null && Regex.IsMatch(t, @"\A[0-9]{1,9}\z")
+                ? Math.Min(long.Parse(t, NumberStyles.None, CultureInfo.InvariantCulture), RetryMaxMs / 1000) * 1000
+                : 0;
+            return Math.Min(RetryMaxMs, Math.Max(backoff, server));
+        }
+
         private const string OpenIdChars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
         /// <summary>
@@ -443,8 +484,32 @@ namespace Strait
             return sb.ToString();
         }
 
+        /// <summary>
+        /// A unique id for one conversion event when the app gives none (contract B13a): the engine stores an
+        /// eventId once, so a retried send is never counted twice. <c>e_&lt;base36 ms&gt;_&lt;12 × [a-z0-9]&gt;</c>.
+        /// </summary>
+        public static string NewEventId(long now, Func<double>? random = null) => "e" + NewOpenId(now, random).Substring(1);
+
+        /// <summary>
+        /// B6a: storage restored from a backup of another install (Android Auto Backup, a restored iPhone) brings back
+        /// <c>strait.deferredChecked</c>. The app's install time, stored next to it, tells: a different stored time = a
+        /// new install, so the check runs again. No stored time (an app updated from an older SDK) = adopt it, never a
+        /// new install. Unknown install time (null, below 1 ms, not finite) = the B6 rule alone. Fractions are truncated.
+        /// </summary>
+        public static FirstLaunchStateResult FirstLaunchState(string? flag, string? storedInstallTime, double? installTime)
+        {
+            string? t = installTime is double d && !double.IsNaN(d) && !double.IsInfinity(d) && d >= 1 && d < 9e18
+                ? ((long)Math.Truncate(d)).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : null;
+            var stored = string.IsNullOrEmpty(storedInstallTime) ? null : storedInstallTime;
+            if (flag != "1") return new FirstLaunchStateResult(true, false, t != null && t != stored ? t : null);
+            if (t == null || t == stored) return new FirstLaunchStateResult(false, false, null);
+            if (stored == null) return new FirstLaunchStateResult(false, false, t);
+            return new FirstLaunchStateResult(true, true, t);
+        }
+
         private static readonly Random Rng = new Random();
-        private static double DefaultRandom() { lock (Rng) return Rng.NextDouble(); }
+        internal static double DefaultRandom() { lock (Rng) return Rng.NextDouble(); }
 
         /// <summary>JS <c>n.toString(36)</c> for an integer.</summary>
         internal static string ToBase36(long n)

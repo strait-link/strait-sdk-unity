@@ -28,6 +28,7 @@ public class StraitBootstrap : MonoBehaviour
                      : Application.platform == RuntimePlatform.IPhonePlayer ? "ios" : "other",
             DeviceFields = StraitDevice.Collect,        // without them /v1/match answers 400 and the install is never matched
             DeviceClass = StraitDevice.Class,           // phone / tablet on open reports (iPad taps)
+            InstallTime = StraitDevice.InstallTime,     // reinstalls from a link: PlayerPrefs comes back from backups (B6a)
         });
 
         Client.OnLink += e =>                           // past events are replayed to late subscribers

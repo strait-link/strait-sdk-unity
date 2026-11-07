@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(9, v.GetProperty("version").GetInt32());
+            Assert.Equal(11, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -48,6 +48,24 @@ namespace Strait.Tests
             Assert.Equal(100, StraitCore.OpenQueueMax);
             Assert.Equal(604_800_000L, StraitCore.OpenQueueMaxAgeMs);
             Assert.Equal(604_800_000L, StraitCore.AttributionWindowMs);
+        }
+
+        [Fact]
+        public void FirstLaunchStateVectors()
+        {
+            var cases = Vectors().GetProperty("firstLaunchState");
+            Assert.True(cases.GetArrayLength() >= 14);
+            foreach (var c in cases.EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var t = c.GetProperty("installTime");
+                double? installTime = t.ValueKind == JsonValueKind.Null ? (double?)null : t.GetDouble();
+                var got = StraitCore.FirstLaunchState(StrOrNull(c.GetProperty("flag")), StrOrNull(c.GetProperty("stored")), installTime);
+                var x = c.GetProperty("expected");
+                Assert.True(x.GetProperty("firstLaunch").GetBoolean() == got.FirstLaunch, $"{name}: firstLaunch");
+                Assert.True(x.GetProperty("clearFlag").GetBoolean() == got.ClearFlag, $"{name}: clearFlag");
+                Assert.True(StrOrNull(x.GetProperty("storeInstallTime")) == got.StoreInstallTime, $"{name}: storeInstallTime '{got.StoreInstallTime}'");
+            }
         }
 
         [Fact]
@@ -241,6 +259,20 @@ namespace Strait.Tests
                 var st = c.GetProperty("status");
                 int? status = st.ValueKind == JsonValueKind.Null ? (int?)null : st.GetInt32();
                 Assert.True(c.GetProperty("expected").GetBoolean() == StraitCore.ShouldRetryReport(status), $"status={status}");
+            }
+        }
+
+        [Fact]
+        public void RetryDelayVectors()
+        {
+            var cases = Vectors().GetProperty("retryDelay");
+            Assert.True(cases.GetArrayLength() >= 21);
+            foreach (var c in cases.EnumerateArray())
+            {
+                var ra = c.GetProperty("retryAfter");
+                var got = StraitCore.RetryDelayMs(c.GetProperty("failures").GetInt32(),
+                    ra.ValueKind == JsonValueKind.Null ? null : ra.GetString(), c.GetProperty("random").GetDouble());
+                Assert.True(c.GetProperty("expected").GetInt64() == got, $"{c.GetProperty("name").GetString()}: got {got}");
             }
         }
 
