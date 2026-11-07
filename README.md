@@ -562,6 +562,11 @@ public sealed class UnityWebRequestTransport : IStraitRetryAfterTransport
 }
 ```
 
+## User consent / opt-out
+
+If your game asks for consent first (for example under India's DPDP Act or a GDPR consent flow in the EU), call `await Client.SetEnabled(false)` until the person agrees: Strait then sends no open reports or events, does no install matching, and deletes reports waiting on the device. The choice is kept across launches in your `Storage` (use `PlayerPrefsStore`, not the in-memory default); `SetEnabled(true)` turns it back on (default: on) and `IsEnabled()` reads it. Call it before `Start` on a first launch so the deferred check waits for the answer; `SetEnabled(true)` then runs it.
+Links that carry their own destination still open your screens. A Strait short link is looked up through the engine's `/v1/lookup`, which records nothing (no tap, no open, no tap id), so it still opens the right screen; only if that lookup fails (offline) does it come back `Matched = false, Reason = "disabled"`. Whether you need consent, and for what, is a question for your own legal advice.
+
 ## API summary
 
 - `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `DeviceClassForSize`, `DeviceClassForModel`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
@@ -571,7 +576,7 @@ public sealed class UnityWebRequestTransport : IStraitRetryAfterTransport
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId, clickId, eventId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId, clickId, eventId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `SetEnabled(enabled)`, `IsEnabled()`, `Stop()`.
 - `Doctor`: `Findings(publishableKey, endpoint, platform, appId, certSha256, file)` (pure, B23) → `DoctorReport {Ok, Findings}` of `DoctorFinding {Id, Severity, Title, Fix}`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the React Native SDK's fields and wire values, minus `referralCode`.

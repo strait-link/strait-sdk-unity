@@ -1,7 +1,17 @@
 # Changelog
 
-## 0.9.0 (5 Nov 2026)
+## 0.9.0 (7 Nov 2026)
 
+- New opt-out switch for consent flows (India's DPDP Act, GDPR): `await Client.SetEnabled(false)` until the
+  person agrees, `SetEnabled(true)` after, `IsEnabled()` reads it. While off the SDK sends no open reports or
+  events, does no install or clipboard matching (`CheckDeferred`/`ClaimHandoff` return `reason "disabled"`),
+  remembers no tap and deletes the reports and tap saved on the device. Kept across launches in your `Storage`
+  (`strait.enabled`); default on, so nothing changes for existing games. Links that carry their own
+  destination still reach `OnLink`; a Strait short link is looked up through `POST /v1/lookup`, which records
+  nothing (key + host + path only), so it still routes (`reason "disabled"` only if that lookup fails). A first
+  launch while off keeps its deferred check due: `SetEnabled(true)` runs it. Switched off during that check, the
+  iPhone clipboard (paste handoff) is not read, so no paste prompt. Same contract as the React Native,
+  Android, Swift, Flutter and web SDKs (ADR `docs/adr/0001-opt-out.md`).
 - Fix: reinstalls from a link are no longer lost. Android Auto Backup and restored iPhones put back
   PlayerPrefs, and with it the "deferred check done" flag, so a reinstall skipped its deferred link and
   was never counted. New optional `StraitConfig.InstallTime` (`Func<long?>`, Unix ms): the SDK stores it
