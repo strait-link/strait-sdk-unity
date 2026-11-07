@@ -136,17 +136,15 @@ namespace Strait
         }
 
         /// <summary>
+        /// A Strait link domain answers 404 {"error":"not configured"} until Apps &amp; stores has this platform's app.
+        /// Compared byte for byte (what the engine's well-known route sends), so every SDK agrees on any other body.
+        /// </summary>
+        private static bool NotConfigured(DoctorFile file) => file.Status == 404 && file.Body == "{\"error\":\"not configured\"}";
+
+        /// <summary>
         /// Listed apps in file order, once each: Android package → its fingerprints; iOS full appID (TEAM.bundle).
         /// Null when the body isn't the JSON expected.
         /// </summary>
-        /// <summary>A Strait link domain answers 404 {"error":"not configured"} until Apps &amp; stores has this platform's app.</summary>
-        private static bool NotConfigured(DoctorFile file)
-        {
-            if (file.Status != 404) return false;
-            try { return StraitJson.Parse(file.Body ?? "") is Dictionary<string, object?> o && o.TryGetValue("error", out var e) && e is string s && s == "not configured"; }
-            catch (Exception) { return false; }
-        }
-
         private static List<(string Id, List<string> Fps)>? ListedApps(bool android, string? body)
         {
             object? json;

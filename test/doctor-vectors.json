@@ -688,6 +688,64 @@
       ]
     },
     {
+      "name": "host.file_missing android 404 not configured with spaces (only the exact engine body counts)",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "{ \"error\": \"not configured\" }"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 404 not configured in single quotes",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "{'error':'not configured'}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
       "name": "host.file_missing ios 500 with the not configured body",
       "input": {
         "platform": "ios",

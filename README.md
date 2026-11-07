@@ -45,9 +45,9 @@ built-in writer and parser (`StraitJson`).
 > Unity editor or on a device. It is a documented sketch: check it on real devices
 > before you ship.
 
-## Fastest path (about 5 minutes)
+## Guided setup
 
-There's no `strait init` for Unity yet. The fastest path is this package's **Quick start** sample (step 3 below): a ready-made `StraitBootstrap` MonoBehaviour you give your key and link address. Or let your AI coding tool do it: connect the [Strait MCP server](https://straitlink.in/docs/mcp/) and run its `get_started` prompt with platform `unity`; it pastes the exact setup from the docs. Then check that your link domain lists your app:
+There's no `strait init` for Unity yet. The quickest setup is this package's **Quick start** sample (step 3 below): a ready-made `StraitBootstrap` MonoBehaviour you give your key and link address. Or let your AI coding tool do it: connect the [Strait MCP server](https://straitlink.in/docs/mcp/) and run its `get_started` prompt with platform `unity`; it pastes the exact setup from the docs. Then check that your link domain lists your app:
 
 ```sh
 npx @straitlink/cli doctor --host <your-handle>.strait.link --android <your.package> --ios <your.bundle.id>
