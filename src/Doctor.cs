@@ -95,12 +95,13 @@ namespace Strait
             bool android = platform != "ios";
             if (file.Status == null)
                 return new[] { Err("host.unreachable", $"Can't reach {host}", "Check that endpoint is your link domain (Dashboard → Get started) and that this device is online.") };
-            var apps = file.Status == 200 ? ListedApps(android, file.Body) : null;
+            var apps = file.Status == 200 ? ListedApps(android, file.Body) : NotConfigured(file) ? new List<(string Id, List<string> Fps)>() : null;
             if (apps == null)
                 return new[] { Err("host.file_missing", $"{host} doesn't serve {(android ? "assetlinks.json" : "apple-app-site-association")}",
                     "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there.") };
             if (apps.Count == 0)
-                return new[] { Err("app.none", $"No {(android ? "Android" : "iOS")} app is set up for {host}", "Add your app in Dashboard → Apps & stores.") };
+                return new[] { Err("app.none", $"No {(android ? "Android" : "iOS")} app is set up for {host}",
+                    $"Fill in Dashboard → Apps & stores ({(android ? "package name and SHA-256 fingerprint" : "Team ID and bundle ID")}), wait a minute, then check again. Already done? Make sure {host} is your link domain from Dashboard → Get started.") };
 
             var listed = string.Join(", ", apps.Select(a => a.Id));
             var app = appId?.Trim();
@@ -138,6 +139,14 @@ namespace Strait
         /// Listed apps in file order, once each: Android package → its fingerprints; iOS full appID (TEAM.bundle).
         /// Null when the body isn't the JSON expected.
         /// </summary>
+        /// <summary>A Strait link domain answers 404 {"error":"not configured"} until Apps &amp; stores has this platform's app.</summary>
+        private static bool NotConfigured(DoctorFile file)
+        {
+            if (file.Status != 404) return false;
+            try { return StraitJson.Parse(file.Body ?? "") is Dictionary<string, object?> o && o.TryGetValue("error", out var e) && e is string s && s == "not configured"; }
+            catch (Exception) { return false; }
+        }
+
         private static List<(string Id, List<string> Fps)>? ListedApps(bool android, string? body)
         {
             object? json;

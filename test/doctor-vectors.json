@@ -543,6 +543,180 @@
       ]
     },
     {
+      "name": "app.none android: a Strait link domain before Apps & stores is filled in (404 not configured)",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "{\"error\":\"not configured\"}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.none",
+          "severity": "error",
+          "title": "No Android app is set up for acme.strait.link",
+          "fix": "Fill in Dashboard → Apps & stores (package name and SHA-256 fingerprint), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."
+        }
+      ]
+    },
+    {
+      "name": "app.none ios: a Strait link domain before Apps & stores is filled in (404 not configured)",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "{\"error\":\"not configured\"}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.none",
+          "severity": "error",
+          "title": "No iOS app is set up for acme.strait.link",
+          "fix": "Fill in Dashboard → Apps & stores (Team ID and bundle ID), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."
+        }
+      ]
+    },
+    {
+      "name": "app.none ios: not configured, app id unknown",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": null,
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "{\"error\":\"not configured\"}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "app.none",
+          "severity": "error",
+          "title": "No iOS app is set up for acme.strait.link",
+          "fix": "Fill in Dashboard → Apps & stores (Team ID and bundle ID), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 404 with another JSON error",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "{\"error\":\"not found\"}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing android 404 with a JSON string body",
+      "input": {
+        "platform": "android",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 404,
+          "body": "\"not configured\""
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve assetlinks.json",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
+      "name": "host.file_missing ios 500 with the not configured body",
+      "input": {
+        "platform": "ios",
+        "publishableKey": "st_pub_live_x",
+        "endpoint": "https://acme.strait.link",
+        "appId": "com.acme.app",
+        "certSha256": [],
+        "file": {
+          "status": 500,
+          "body": "{\"error\":\"not configured\"}"
+        }
+      },
+      "ok": false,
+      "findings": [
+        {
+          "id": "key.ok",
+          "severity": "ok",
+          "title": "Publishable key is set",
+          "fix": ""
+        },
+        {
+          "id": "host.file_missing",
+          "severity": "error",
+          "title": "acme.strait.link doesn't serve apple-app-site-association",
+          "fix": "Use your Strait link domain as endpoint (Dashboard → Get started); Strait serves this file there."
+        }
+      ]
+    },
+    {
       "name": "app.none android empty array",
       "input": {
         "platform": "android",
@@ -567,7 +741,7 @@
           "id": "app.none",
           "severity": "error",
           "title": "No Android app is set up for acme.strait.link",
-          "fix": "Add your app in Dashboard → Apps & stores."
+          "fix": "Fill in Dashboard → Apps & stores (package name and SHA-256 fingerprint), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."
         }
       ]
     },
@@ -596,7 +770,7 @@
           "id": "app.none",
           "severity": "error",
           "title": "No Android app is set up for acme.strait.link",
-          "fix": "Add your app in Dashboard → Apps & stores."
+          "fix": "Fill in Dashboard → Apps & stores (package name and SHA-256 fingerprint), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."
         }
       ]
     },
@@ -625,7 +799,7 @@
           "id": "app.none",
           "severity": "error",
           "title": "No iOS app is set up for acme.strait.link",
-          "fix": "Add your app in Dashboard → Apps & stores."
+          "fix": "Fill in Dashboard → Apps & stores (Team ID and bundle ID), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."
         }
       ]
     },
