@@ -130,7 +130,7 @@ namespace Strait.Tests
         {
             var r = Host(platform, Ok200(platform == "android" ? "[]" : Aasa()));
             Assert.Equal(F("app.none", "error", $"No {(platform == "android" ? "Android" : "iOS")} app is set up for acme.strait.link",
-                "Add your app in Dashboard → Apps & stores."), r.Findings[1]);
+                $"Fill in Dashboard → Apps & stores ({(platform == "android" ? "package name and SHA-256 fingerprint" : "Team ID and bundle ID")}), wait a minute, then check again. Already done? Make sure acme.strait.link is your link domain from Dashboard → Get started."), r.Findings[1]);
             Assert.False(r.Ok);
         }
 
