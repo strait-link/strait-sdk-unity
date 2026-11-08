@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.1 (8 Nov 2026)
 
 - `doctor()` (contract B23, shared-spec ADR 0002 amendment of 7 Nov): on a Strait link domain before Dashboard → Apps & stores is filled in (it answers 404 `{"error":"not configured"}`, the usual first-time state) the finding is now `app.none` with "Fill in Dashboard → Apps & stores (package name and SHA-256 fingerprint / Team ID and bundle ID), wait a minute, then check again", not `host.file_missing` ("use your Strait link domain as endpoint", which you already were). Every `app.none` fix now names those fields. 51 shared doctor vectors (was 43).
 - README: starts with a guided setup section (no `strait init` for this platform yet: the Quick start sample, or the Strait MCP `get_started` prompt), before the manual quick start.
