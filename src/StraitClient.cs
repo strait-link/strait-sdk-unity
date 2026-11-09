@@ -820,6 +820,18 @@ namespace Strait
                     // The workspace's live iPhone choice (Dashboard Settings → iPhone installs). Read from this
                     // reply only, never stored, so the next check asks the engine again. Missing (older engine) = off.
                     pasteHandoff = Get(res.Json, "ios") is Dictionary<string, object?> ios && IsTrue(ios, "pasteHandoff");
+                    // B24 (engine ADR 0101): asked over IPv6 and nothing found, the engine names its IPv4-only URL;
+                    // ask once more there (same openId, same fields). Only a match there replaces the first answer.
+                    var v4 = record && !IsTrue(res.Json, "matched") ? StraitCore.Ipv4MatchUrl(Get(res.Json, "ipv4Match")) : null;
+                    if (v4 != null)
+                    {
+                        try
+                        {
+                            var again = await Answered(v4, fields);
+                            if (IsTrue(again.Json, "matched")) res = again;
+                        }
+                        catch { /* the first answer stands */ }
+                    }
                     bool matched = IsTrue(res.Json, "matched");
                     ev.Matched = matched;
                     ev.Reason = matched ? null : "no_match";
@@ -1098,8 +1110,10 @@ namespace Strait
             if (!lookupOnly && !await IsEnabled()) throw new InvalidOperationException("disabled");
             var json = body == null ? null : StraitJson.Serialize(body);
             int status; string text; string? retryAfter = null;
-            if (_transport is IStraitRetryAfterTransport t) (status, text, retryAfter) = await t.SendWithRetryAfterAsync(method, _base + path, json);
-            else (status, text) = await _transport.SendAsync(method, _base + path, json);
+            // `path` on the endpoint, or an absolute URL (the engine's IPv4-only match URL, B24).
+            var url = path.StartsWith("https://", StringComparison.Ordinal) ? path : _base + path;
+            if (_transport is IStraitRetryAfterTransport t) (status, text, retryAfter) = await t.SendWithRetryAfterAsync(method, url, json);
+            else (status, text) = await _transport.SendAsync(method, url, json);
             return new Response { Ok = status >= 200 && status < 300, Status = status, Json = StraitJson.ParseObjectOrEmpty(text), RetryAfter = retryAfter };
         }
 
