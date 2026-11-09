@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.3 (9 Nov 2026)
+
+- New: every call that records an app open or install (`/v1/resolve`, `/v1/open`, `/v1/referrer`, `/v1/match`,
+  `/v1/handoff/claim`) now names this SDK, `sdkVersion = "unity/0.9.3"` (contract B25, shared-spec ADR 0007). Unity sent
+  no version before, so Strait couldn't tell which SDK version a game runs; now the dashboard can say when your game is on
+  an older Unity SDK. Opens saved offline keep the version they were made with. `/v1/event` and the opted-out
+  `/v1/lookup` send none. New public constant `StraitClient.SdkVersion` (the plain number).
+
 ## 0.9.2 (9 Nov 2026)
 
 - iPhone install matching across IPv4 / IPv6 (contract B24, engine ADR 0101): when Safari tapped the link over IPv4
