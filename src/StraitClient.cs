@@ -205,6 +205,13 @@ namespace Strait
     /// </summary>
     public sealed class StraitClient
     {
+        /// <summary>This SDK's version (equals package.json; a test checks it).</summary>
+        public const string SdkVersion = "0.9.3";
+        /// <summary>
+        /// <c>sdkVersion</c> on every call that records an app open or install (contract B25, shared-spec ADR 0007):
+        /// the SDK names itself, so the engine can tell which SDK and version an app runs. Never on /v1/event or /v1/lookup.
+        /// </summary>
+        private const string WireSdkVersion = "unity/" + SdkVersion;
         public const string DeferredFlag = "strait.deferredChecked";
         /// <summary>Storage key of the unsent open reports (JSON array).</summary>
         public const string QueueKey = "strait.pendingOpens";
@@ -680,6 +687,7 @@ namespace Strait
                             Kv("firstLaunch", firstLaunch),
                             Kv("at", t0),
                             Kv("deviceClass", DeviceClassValue()),
+                            Kv("sdkVersion", WireSdkVersion),
                         });
                         bool matched = IsTrue(res.Json, "matched");
                         ev.Matched = matched;
@@ -791,6 +799,7 @@ namespace Strait
                             Kv("linkId", linkId),
                             Kv("clickId", referrerClick),
                             Kv("platform", "android"),
+                            Kv("sdkVersion", WireSdkVersion),
                         };
                         if (record) { body.Add(Kv("openId", id)); body.Add(Kv("at", t0)); }
                         else body.Add(Kv("record", false));
@@ -812,6 +821,7 @@ namespace Strait
                     {
                         Kv("publishableKey", _config.PublishableKey),
                         Kv("platform", _config.Platform),
+                        Kv("sdkVersion", WireSdkVersion),
                     };
                     AddDevice(fields);
                     if (record) { fields.Add(Kv("openId", id)); fields.Add(Kv("at", t0)); }
@@ -908,6 +918,7 @@ namespace Strait
                 Kv("platform", "ios"),
                 Kv("openId", openId),
                 Kv("at", at),
+                Kv("sdkVersion", WireSdkVersion),
             });
 
         private void ApplyClaim(LinkEvent ev, Response res, long t0)
@@ -938,6 +949,7 @@ namespace Strait
                 ["openId"] = openId, ["kind"] = kind, ["route"] = route, ["appState"] = appState,
                 ["platform"] = platform, ["url"] = url, ["clickId"] = clickId, ["linkId"] = null,
                 ["matched"] = matched, ["reason"] = null, ["firstLaunch"] = firstLaunch, ["at"] = at,
+                ["sdkVersion"] = WireSdkVersion, // queued with the report: a saved report keeps the version it was made with
             };
 
         private async Task<T> Serial<T>(Func<Task<T>> fn)
