@@ -201,6 +201,16 @@ namespace Strait
             return out_;
         }
 
+        /// <summary>The longest Play install referrer the engine reads (engine ADR 0106); a longer one is not sent.</summary>
+        public const int InstallReferrerMax = 4096;
+
+        /// <summary>
+        /// B26: the raw Play install referrer as sent in <c>installReferrer</c> on the calls that record the install:
+        /// the string itself when 1..4096 characters, else null (not sent). The engine keeps only its five utm_* tags.
+        /// </summary>
+        public static string? InstallReferrerField(string? referrer) =>
+            !string.IsNullOrEmpty(referrer) && referrer!.Length <= InstallReferrerMax ? referrer : null;
+
         /// <summary>The strait_link id inside a Play Install Referrer string, or null.</summary>
         public static string? ParseStraitLink(string? referrer) => ReferrerParam(referrer, "strait_link");
 

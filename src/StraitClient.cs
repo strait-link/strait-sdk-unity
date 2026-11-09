@@ -206,7 +206,7 @@ namespace Strait
     public sealed class StraitClient
     {
         /// <summary>This SDK's version (equals package.json; a test checks it).</summary>
-        public const string SdkVersion = "0.9.3";
+        public const string SdkVersion = "0.9.4";
         /// <summary>
         /// <c>sdkVersion</c> on every call that records an app open or install (contract B25, shared-spec ADR 0007):
         /// the SDK names itself, so the engine can tell which SDK and version an app runs. Never on /v1/event or /v1/lookup.
@@ -784,11 +784,14 @@ namespace Strait
             try
             {
                 bool done = false;
+                // B26: the raw Play referrer rides on the calls that record the install, so the install keeps its campaign.
+                string? installReferrer = null;
                 if (_config.Platform == "android")
                 {
                     string? referrer = null;
                     try { if (_config.InstallReferrer != null) referrer = await _config.InstallReferrer(); }
                     catch { referrer = null; }
+                    if (record) installReferrer = StraitCore.InstallReferrerField(referrer);
                     var linkId = StraitCore.ParseStraitLink(referrer);
                     if (linkId != null)
                     {
@@ -803,6 +806,7 @@ namespace Strait
                         };
                         if (record) { body.Add(Kv("openId", id)); body.Add(Kv("at", t0)); }
                         else body.Add(Kv("record", false));
+                        if (installReferrer != null) body.Add(Kv("installReferrer", installReferrer));
                         var res = await Answered("/v1/referrer", body);
                         if (IsTrue(res.Json, "matched"))
                         {
@@ -826,6 +830,7 @@ namespace Strait
                     AddDevice(fields);
                     if (record) { fields.Add(Kv("openId", id)); fields.Add(Kv("at", t0)); }
                     else fields.Add(Kv("record", false)); // read only: the engine adds no install, open or webhook
+                    if (installReferrer != null) fields.Add(Kv("installReferrer", installReferrer));
                     var res = await Answered("/v1/match", fields);
                     // The workspace's live iPhone choice (Dashboard Settings → iPhone installs). Read from this
                     // reply only, never stored, so the next check asks the engine again. Missing (older engine) = off.

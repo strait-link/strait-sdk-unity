@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.4 (9 Nov 2026)
+
+- The install now keeps its campaign. On Android's first launch the SDK sends the Google Play install referrer your
+  `StraitConfig.InstallReferrer` returns (`installReferrer`, contract B26, shared-spec ADR 0008) with the call that
+  records the install (`/v1/referrer` and its `/v1/match` fallback), so Strait can show which campaign brought it
+  (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`) even when the ad never went through a Strait
+  link. Strait keeps only those five tags; `gclid` and everything else is dropped on arrival and the raw string is never
+  stored. Not sent on `CheckDeferred()`, on iPhone, when longer than 4096 characters, or while switched off
+  (`SetEnabled(false)` sends nothing at all, as before).
+
 ## 0.9.3 (9 Nov 2026)
 
 - New: every call that records an app open or install (`/v1/resolve`, `/v1/open`, `/v1/referrer`, `/v1/match`,

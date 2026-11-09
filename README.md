@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.9.3**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.9.4**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -89,7 +89,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.3
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.4
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -133,6 +133,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B14 | Every open reported exactly once (`NewOpenId` = `LinkEvent.Id`); failed reports saved under `strait.pendingOpens` and retried; a 429/5xx stops the flush and holds the queue (`StraitCore.RetryDelayMs`, `Retry-After`, C1); `PendingOpenReports()`, `FlushOpenReports()`; `deviceClass` (`StraitConfig.DeviceClass`: `StraitCore.DeviceClassForModel` on iOS, `DeviceClassForSize(smallestScreenWidthDp)` on Android) on `/v1/resolve` and `/v1/open` | ✓ (the game supplies it, see below) |
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
+| B26 | Android: the install carries the raw Play referrer (`installReferrer`, 1..4096 chars, `StraitCore.InstallReferrerField`, vectors v12) on `/v1/referrer` and the `/v1/match` fallback; never on `CheckDeferred()` or while off. Strait keeps only the five `utm_*` tags; `gclid` and the rest are dropped on arrival, never stored | ✓ (the game supplies the referrer) |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 | B19 | iPhone paste handoff, chosen in the Dashboard and read live from the `/v1/match` reply (`ios.pasteHandoff`): device matching first, then detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
