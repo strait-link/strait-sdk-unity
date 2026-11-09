@@ -1,5 +1,5 @@
 {
-  "version": 14,
+  "version": 15,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -2506,15 +2506,15 @@
       }
     },
     {
-      "name": "phone with country code",
+      "name": "phone with country code → +919876543210",
       "input": "+91 98765-43210",
       "expected": {
-        "userId": "92b5072176e723878b5e06ff3ca61898e4eb74e8c46642a0f2db800b17364ab0",
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
         "userIdHashed": true
       }
     },
     {
-      "name": "same phone, digits only = same hash",
+      "name": "digits only, no + → 919876543210 (a different hash)",
       "input": "919876543210",
       "expected": {
         "userId": "92b5072176e723878b5e06ff3ca61898e4eb74e8c46642a0f2db800b17364ab0",
@@ -2522,7 +2522,7 @@
       }
     },
     {
-      "name": "phone with brackets and dots",
+      "name": "phone with brackets and dots → 5551234567",
       "input": "(555) 123.4567",
       "expected": {
         "userId": "3c95277da5fd0da6a1a44ee3fdf56d20af6c6d242695a40e18e6e90dc3c5872c",
@@ -2530,7 +2530,7 @@
       }
     },
     {
-      "name": "8 digits = phone",
+      "name": "8 digits = phone → 12345678",
       "input": "12345678",
       "expected": {
         "userId": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
@@ -2656,6 +2656,363 @@
         "userId": "356086f3ff7ca1577972c0bd41d89c8d44510df9c41fda5d5e10cbbf576e13c0",
         "userIdHashed": true
       }
+    },
+    {
+      "name": "India, spaces → +919876543210",
+      "input": "+91 98765 43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "India, 00 prefix = + → +919876543210",
+      "input": "0091 98765 43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "India, 00 and spaces → +919876543210",
+      "input": "00 91 98765 43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "India, dots → +919876543210",
+      "input": "+91.98765.43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "India, + inside brackets → +919876543210",
+      "input": "(+91) 98765 43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "India, trunk 0 and a dash → 09876543210",
+      "input": "098765-43210",
+      "expected": {
+        "userId": "8ffcdae3d5e020edeb044b5fdf82bbf4bcac96f4fb92b577dc2d59a34c7ef308",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "India, 10 digits → 9876543210",
+      "input": "9876543210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "US style brackets → 9876543210",
+      "input": "(987) 654-3210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "US, +1 → +15551234567",
+      "input": "+1 (555) 123-4567",
+      "expected": {
+        "userId": "8a59780bb8cd2ba022bfa5ba2ea3b6e07af17a7d8b30c1f9b3390e36f69019e4",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "US, 001 = +1 → +15551234567",
+      "input": "001 555 123 4567",
+      "expected": {
+        "userId": "8a59780bb8cd2ba022bfa5ba2ea3b6e07af17a7d8b30c1f9b3390e36f69019e4",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "UK → +442079460958",
+      "input": "+44 20 7946 0958",
+      "expected": {
+        "userId": "f0bf0228144d9fe2bdf1da2d8ca698f17bf1410ee688b075c27062e47b6f0b6d",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "UK with (0) keeps the 0 → +4402079460958",
+      "input": "+44 (0)20 7946 0958",
+      "expected": {
+        "userId": "4e2b154833817c3fa2d6332246c75f253043292a0edd90ae79e3147f15e9f036",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "15 digits after + → +123456789012345",
+      "input": "+123456789012345",
+      "expected": {
+        "userId": "1b4baed9795e95210d08a51886e9d33e5da06189403c2a823c9d92e222ad55e8",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "17 digits after 00 → +123456789012345",
+      "input": "00123456789012345",
+      "expected": {
+        "userId": "1b4baed9795e95210d08a51886e9d33e5da06189403c2a823c9d92e222ad55e8",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "no-break spaces → +919876543210",
+      "input": "+91 98765 43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "narrow no-break spaces → +919876543210",
+      "input": "+91 98765 43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "bidi marks from a copied contact → +919876543210",
+      "input": "‪+91 98765 43210‬",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "left-to-right marks → +919876543210",
+      "input": "‎+91 98765 43210‎",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "en dashes → +919876543210",
+      "input": "+91–98765–43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "non-breaking hyphen → 9876543210",
+      "input": "98765‑43210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "minus sign → 9876543210",
+      "input": "98765−43210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "slash → 9876543210",
+      "input": "98765/43210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "tel: link → +919876543210",
+      "input": "tel:+91-98765-43210",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "TEL: in capitals → 9876543210",
+      "input": "TEL:9876543210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "full-width digits and ＋ → +919876543210",
+      "input": "＋９１　９８７６５－４３２１０",
+      "expected": {
+        "userId": "f3a47ce5ce3d4ca8ad15225a245b2759022f79489f5c62719b8c9490f7aab90e",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "Devanagari digits → 9876543210",
+      "input": "९८७६५४३२१०",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "Arabic-Indic digits → +971501234567",
+      "input": "+٩٧١ ٥٠ ١٢٣ ٤٥٦٧",
+      "expected": {
+        "userId": "5cd602a57e6a0414e38023888d6275b31208be50ab5cf4c1e7f197138da7fed1",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "a date (8 digits) is hashed too → 20261110",
+      "input": "2026-11-10",
+      "expected": {
+        "userId": "86d4291302bf64384d538272fe3b4fd65f79ba5e4feb334ccc6439c1992c5563",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email with a full-width at sign = hashed",
+      "input": "Priya＠Example.com",
+      "expected": {
+        "userId": "9dde6d96d57e13359bc86bafce4acfbc26d836e97ea1d003add7490a287c4f1d",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email with a small at sign = hashed",
+      "input": "priya﹫example.com",
+      "expected": {
+        "userId": "92f66223f49e82d4c3ca972075e2cc069c45a8f95fd2cfee5af22ecd1a9775e3",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "not a phone: + after a digit",
+      "input": "98765+43210",
+      "expected": {
+        "userId": "98765+43210",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: two +",
+      "input": "++919876543210",
+      "expected": {
+        "userId": "++919876543210",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: an extension (letters)",
+      "input": "+91 98765 43210 ext 12",
+      "expected": {
+        "userId": "+91 98765 43210 ext 12",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: order id with a word",
+      "input": "order 12345",
+      "expected": {
+        "userId": "order 12345",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: 5 digits",
+      "input": "12345",
+      "expected": {
+        "userId": "12345",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: # before digits",
+      "input": "#98765432",
+      "expected": {
+        "userId": "#98765432",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: 16 digits after +",
+      "input": "+1234567890123456",
+      "expected": {
+        "userId": "+1234567890123456",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: 18 digits after 00",
+      "input": "00123456789012345678",
+      "expected": {
+        "userId": "00123456789012345678",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: tel: and 7 digits",
+      "input": "tel:1234567",
+      "expected": {
+        "userId": "tel:1234567",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: hex id",
+      "input": "deadbeefcafe0042",
+      "expected": {
+        "userId": "deadbeefcafe0042",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: 0x hex id",
+      "input": "0x1f2e3d4c5b6a",
+      "expected": {
+        "userId": "0x1f2e3d4c5b6a",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: all-digit uuid (32 digits)",
+      "input": "12345678-1234-1234-1234-123456789012",
+      "expected": {
+        "userId": "12345678-1234-1234-1234-123456789012",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: snowflake id (19 digits)",
+      "input": "1234567890123456789",
+      "expected": {
+        "userId": "1234567890123456789",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "not a phone: underscore",
+      "input": "98765_43210",
+      "expected": {
+        "userId": "98765_43210",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "tab between digits = control = not sent",
+      "input": "98765\t43210",
+      "expected": null
     }
   ]
 }

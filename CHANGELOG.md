@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.6 (10 Nov 2026)
+
+- `setUserId` hashes more ways of writing a phone number, so none leaves the phone raw (contract B27 v15, shared-spec
+  ADR 0010): `(+91) 98765 43210`, `00 91 …`, numbers copied from the contacts app (no-break spaces, invisible
+  direction marks), Unicode dashes and the minus sign, `/`, `tel:` links, full-width digits and Indian / Arabic
+  digits. An id with `＠` is hashed like one with `@`. **The hashed form of a phone now keeps its `+`:**
+  `+91 98765 43210` and `0091 98765 43210` are sent as `sha256("+919876543210")` (E.164, as most apps store it);
+  `98765 43210` stays `sha256("9876543210")`. Conformance vectors v15.
+
 ## 0.9.5 (10 Nov 2026)
 
 - `SetUserId(id)` (contract B27, shared-spec ADR 0009): call it after your sign-in and `SetUserId(null)` on sign-out.

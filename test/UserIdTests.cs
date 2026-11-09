@@ -53,8 +53,20 @@ namespace Strait.Tests
             Assert.Equal(Sha("priya@example.com"), email.UserId);
             Assert.True(email.UserIdHashed);
             var phone = StraitCore.UserIdField("+91 98765-43210")!;
-            Assert.Equal(Sha("919876543210"), phone.UserId);
+            Assert.Equal(Sha("+919876543210"), phone.UserId);
             Assert.True(phone.UserIdHashed);
+            // v15 (shared-spec ADR 0010): formats v14 sent raw; 00 = +; the hashed form keeps the +.
+            foreach (var p in new[] { "(+91) 98765 43210", "0091 98765 43210", "+91\u00A098765\u00A043210", "\u202A+91 98765 43210\u202C",
+                         "+91\u201398765\u201343210", "tel:+91-98765-43210", "\uFF0B\uFF19\uFF11 \uFF19\uFF18\uFF17\uFF16\uFF15 \uFF14\uFF13\uFF12\uFF11\uFF10" })
+                Assert.Equal(Sha("+919876543210"), StraitCore.UserIdField(p)!.UserId);
+            Assert.Equal(Sha("9876543210"), StraitCore.UserIdField("\u096F\u096E\u096D\u096C\u096B\u096A\u0969\u0968\u0967\u0966")!.UserId);
+            Assert.Equal(Sha("priya\uFF20example.com"), StraitCore.UserIdField("Priya\uFF20Example.com")!.UserId);
+            foreach (var id in new[] { "98765+43210", "+91 98765 43210 ext 12", "TEL:1234567", "98765_43210" })
+            {
+                var plain = StraitCore.UserIdField(id)!;
+                Assert.Equal(id, plain.UserId);
+                Assert.False(plain.UserIdHashed);
+            }
             foreach (var bad in new[] { null, "", "   ", new string('x', StraitCore.UserIdMax + 1), "a\nb" })
                 Assert.Null(StraitCore.UserIdField(bad));
             Assert.Equal(new string('x', StraitCore.UserIdMax), StraitCore.UserIdField(new string('x', StraitCore.UserIdMax))!.UserId);

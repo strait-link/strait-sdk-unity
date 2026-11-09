@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.9.5**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.9.6**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -89,7 +89,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.5
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.6
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -274,9 +274,11 @@ clears it), and not sent with app opens or installs. An event saved offline keep
 device until it is sent (up to 7 days, in `strait.pendingOpens`; deleted on opt-out).
 
 Emails and phone numbers never leave the phone: an id with `@` is sent as the SHA-256 hex of its
-lower-cased form, one made only of digits, spaces and `+ ( ) . -` with 8-15 digits as the SHA-256 hex of
-its digits, with `userIdHashed: true`. To join, hash your own value the same way
-(`sha256("priya@example.com")`, `sha256("919876543210")`). A plain numeric id of 8-15 digits is hashed
+lower-cased form, a phone number (8-15 digits with any spaces, dashes, dots, brackets
+or slashes, an optional `+`, `00` or `tel:`; Indian, Arabic and full-width digits too) as the SHA-256 hex of `+` and
+its digits when written with `+` or `00`, else of its digits, with `userIdHashed: true` (shared-spec ADR 0010). To
+join, hash your own value the same way (`sha256("priya@example.com")`, `sha256("+919876543210")` for a number
+stored in E.164). A plain numeric id of 8-15 digits is hashed
 too; prefix it (`u_12345678`) to keep it readable. Ids longer than 128 characters or holding control
 characters are not sent (and clear the previous one). Anyone with your publishable key can send any
 `userId`, so treat it as a claim, like revenue sent from the game.
