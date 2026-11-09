@@ -21,8 +21,8 @@ namespace Strait.Tests
         private static string Sha(string s) =>
             string.Concat(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(s)).Select(b => b.ToString("x2")));
 
-        private static async Task<(StraitClient Strait, RouteEngine Engine, MemoryKeyValueStore Store)> Make(int eventStatus = 202,
-            MemoryKeyValueStore? store = null, bool start = true)
+        private static async Task<(StraitClient Strait, RouteEngine Engine, IKeyValueStore Store)> Make(int eventStatus = 202,
+            IKeyValueStore? store = null, bool start = true)
         {
             var e = new RouteEngine();
             e.Routes["/v1/event"] = eventStatus;
@@ -107,6 +107,39 @@ namespace Strait.Tests
             e.Routes["/v1/event"] = 202;
             await strait.FlushOpenReports();
             Assert.Equal("user_1", e.Of("/v1/event").Last().GetProperty("userId").GetString());
+        }
+
+        [Fact]
+        public async Task TheIdIsReadWhenTrackEventIsCalled_NotAfterItsFirstAwait()
+        {
+            // A slow storage read (the remembered tap) must not let a sign-out right after TrackEvent change the event's user.
+            var store = new SlowStore();
+            var (strait, e, _) = await Make(store: store);
+            strait.SetUserId("user_1");
+            store.Hold = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var a = strait.TrackEvent("purchase");
+            strait.SetUserId(null);
+            var b = strait.TrackEvent("after_logout");
+            strait.SetUserId("other");
+            store.Hold.SetResult(true);
+            await Task.WhenAll(a, b);
+            var ev = e.Of("/v1/event");
+            Assert.Equal("user_1", ev.Single(x => x.GetProperty("event").GetString() == "purchase").GetProperty("userId").GetString());
+            Assert.False(Has(ev.Single(x => x.GetProperty("event").GetString() == "after_logout"), "userId"));
+        }
+
+        /// <summary>Storage whose reads wait on <see cref="Hold"/> when it is set (a slow PlayerPrefs / disk).</summary>
+        private sealed class SlowStore : IKeyValueStore
+        {
+            private readonly MemoryKeyValueStore _inner = new MemoryKeyValueStore();
+            public TaskCompletionSource<bool>? Hold;
+            public async Task<string?> GetItemAsync(string key)
+            {
+                var h = Hold;
+                if (h != null) await h.Task;
+                return await _inner.GetItemAsync(key);
+            }
+            public Task SetItemAsync(string key, string value) => _inner.SetItemAsync(key, value);
         }
 
         [Fact]

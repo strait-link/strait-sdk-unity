@@ -134,7 +134,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B26 | Android: the install carries the raw Play referrer (`installReferrer`, 1..4096 chars, `StraitCore.InstallReferrerField`, vectors v12) on `/v1/referrer` and the `/v1/match` fallback; never on `CheckDeferred()` or while off. Strait keeps only the five `utm_*` tags; `gclid` and the rest are dropped on arrival, never stored | ✓ (the game supplies the referrer) |
-| B27 | `SetUserId(id)` after your sign-in, `SetUserId(null)` on sign-out: later `TrackEvent` bodies carry `userId` + `userIdHashed` (`StraitCore.UserIdField`, vectors v13), taken when the event is built so a saved event keeps it; never on any other call. Emails and phone numbers are sent as SHA-256 hex, never raw; memory only, never logged; ignored while off and cleared by `SetEnabled(false)` | ✓ |
+| B27 | `SetUserId(id)` after your sign-in, `SetUserId(null)` on sign-out: later `TrackEvent` bodies carry `userId` + `userIdHashed` (`StraitCore.UserIdField`, vectors v14), read when `TrackEvent` is called so a saved event keeps it; never on any other call. Emails and phone numbers are sent as SHA-256 hex, never raw; memory only, never logged; ignored while off and cleared by `SetEnabled(false)` | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 | B19 | iPhone paste handoff, chosen in the Dashboard and read live from the `/v1/match` reply (`ios.pasteHandoff`): device matching first, then detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
@@ -270,7 +270,8 @@ StraitLinks.Client.SetUserId(null);      // on sign-out
 Later `TrackEvent` calls carry this id to your `app.event` webhook (`userId`, `userIdHashed`), so you can
 join Strait's tap, link and campaign to your own players and see which campaigns bring paying ones
 (contract B27). It is kept in memory only, never logged, ignored while `SetEnabled(false)` (which also
-clears it), and not sent with app opens or installs. An event saved to send later keeps the id it was tracked with.
+clears it), and not sent with app opens or installs. An event saved offline keeps the id it was tracked with on the
+device until it is sent (up to 7 days, in `strait.pendingOpens`; deleted on opt-out).
 
 Emails and phone numbers never leave the phone: an id with `@` is sent as the SHA-256 hex of its
 lower-cased form, one made only of digits, spaces and `+ ( ) . -` with 8-15 digits as the SHA-256 hex of

@@ -27,7 +27,7 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(13, v.GetProperty("version").GetInt32());
+            Assert.Equal(14, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
                          "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay", "installReferrer", "userId" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
@@ -70,7 +70,7 @@ namespace Strait.Tests
         {
             // B27 (shared-spec ADR 0009): what SetUserId sends with later events.
             var cases = Vectors().GetProperty("userId");
-            Assert.Equal(24, cases.GetArrayLength());
+            Assert.Equal(29, cases.GetArrayLength());
             foreach (var c in cases.EnumerateArray())
             {
                 var name = c.GetProperty("name").GetString();

@@ -609,6 +609,9 @@ namespace Strait
         public async Task<bool> TrackEvent(string name, double? value = null, string? currency = null, string? linkId = null, string? clickId = null,
             string? eventId = null)
         {
+            // B27: the user at the moment of the call (before any await), so a sign-out right after can't change it.
+            UserIdFieldResult? user;
+            lock (_gate) user = _userId;
             try
             {
                 if (!await IsEnabled()) return false;
@@ -620,8 +623,7 @@ namespace Strait
                 catch { stored = null; }
                 if (StraitCore.StaleTap(stored, Now())) DropStaleTap(Now()); // B18: delete, don't just ignore
                 long at = Now();
-                UserIdFieldResult? user;
-                lock (_gate) user = _userId;
+                if (SwitchedOff()) user = null; // switched off meanwhile: the id goes nowhere
                 // B13a: built once (tap id chosen now), with an eventId so a retry is stored once. Null values are left
                 // out of the JSON; the publishable key is added at send time, never saved.
                 var ev = new Dictionary<string, object?>

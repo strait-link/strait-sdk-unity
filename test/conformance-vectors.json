@@ -1,5 +1,5 @@
 {
-  "version": 13,
+  "version": 14,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -2619,6 +2619,43 @@
       "name": "null = not sent",
       "input": null,
       "expected": null
+    },
+    {
+      "name": "BOM before an id is trimmed",
+      "input": "﻿user_4821",
+      "expected": {
+        "userId": "user_4821",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "BOM before an email is trimmed, then hashed",
+      "input": "﻿priya@example.com",
+      "expected": {
+        "userId": "6bdb7e961d54ddc243ec721e6e211ac0a179b19a9ce2ad52a418198e146e69fe",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "unit separator at the end = control = not sent",
+      "input": "user_4821\u001f",
+      "expected": null
+    },
+    {
+      "name": "zero-width non-joiner after @ = still an email",
+      "input": "priya@‌example.com",
+      "expected": {
+        "userId": "353bddf3bf4939743e9846c62550c0a688bf50c7e08316ad0ad894e13a994c56",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email holding a newline = hashed (the @ check first)",
+      "input": "priya\n@example.com",
+      "expected": {
+        "userId": "356086f3ff7ca1577972c0bd41d89c8d44510df9c41fda5d5e10cbbf576e13c0",
+        "userIdHashed": true
+      }
     }
   ]
 }
