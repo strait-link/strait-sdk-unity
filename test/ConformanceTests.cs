@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(12, v.GetProperty("version").GetInt32());
+            Assert.Equal(13, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay", "installReferrer" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay", "installReferrer", "userId" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -43,7 +43,8 @@ namespace Strait.Tests
             Assert.Equal(StraitCore.OpenQueueMaxAgeMs, c.GetProperty("OPEN_QUEUE_MAX_AGE_MS").GetInt64());
             Assert.Equal(StraitCore.AttributionWindowMs, c.GetProperty("ATTRIBUTION_WINDOW_MS").GetInt64());
             Assert.Equal(StraitCore.InstallReferrerMax, c.GetProperty("INSTALL_REFERRER_MAX").GetInt32());
-            Assert.Equal(6, c.EnumerateObject().Count());
+            Assert.Equal(StraitCore.UserIdMax, c.GetProperty("USER_ID_MAX").GetInt32());
+            Assert.Equal(7, c.EnumerateObject().Count());
             Assert.Equal(2000, AppStateTracker.ResumeWindowMs);
             Assert.Equal(1000, AppStateTracker.TransientPauseMs);
             Assert.Equal(100, StraitCore.OpenQueueMax);
@@ -61,6 +62,24 @@ namespace Strait.Tests
             {
                 Assert.True(StrOrNull(c.GetProperty("expected")) == StraitCore.InstallReferrerField(StrOrNull(c.GetProperty("input"))), $"installReferrer #{i}");
                 i++;
+            }
+        }
+
+        [Fact]
+        public void UserIdVectors()
+        {
+            // B27 (shared-spec ADR 0009): what SetUserId sends with later events.
+            var cases = Vectors().GetProperty("userId");
+            Assert.Equal(24, cases.GetArrayLength());
+            foreach (var c in cases.EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var x = c.GetProperty("expected");
+                var got = StraitCore.UserIdField(StrOrNull(c.GetProperty("input")));
+                if (x.ValueKind == JsonValueKind.Null) { Assert.True(got == null, $"{name}: expected null"); continue; }
+                Assert.True(got != null, $"{name}: got null");
+                Assert.True(x.GetProperty("userId").GetString() == got!.UserId, $"{name}: userId '{got.UserId}'");
+                Assert.True(x.GetProperty("userIdHashed").GetBoolean() == got.UserIdHashed, $"{name}: userIdHashed");
             }
         }
 

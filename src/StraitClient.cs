@@ -206,7 +206,7 @@ namespace Strait
     public sealed class StraitClient
     {
         /// <summary>This SDK's version (equals package.json; a test checks it).</summary>
-        public const string SdkVersion = "0.9.4";
+        public const string SdkVersion = "0.9.5";
         /// <summary>
         /// <c>sdkVersion</c> on every call that records an app open or install (contract B25, shared-spec ADR 0007):
         /// the SDK names itself, so the engine can tell which SDK and version an app runs. Never on /v1/event or /v1/lookup.
@@ -252,6 +252,8 @@ namespace Strait
         private bool? _enabled;
         /// <summary>1 = the first-launch check was skipped because the SDK was off: SetEnabled(true) runs it (once: Interlocked).</summary>
         private int _deferredDue;
+        /// <summary>B27: <see cref="SetUserId"/>'s value, in memory only (guarded by _gate), already hashed when it was an email or phone.</summary>
+        private UserIdFieldResult? _userId;
 
         public StraitClient(StraitConfig config)
         {
@@ -491,7 +493,11 @@ namespace Strait
         /// </summary>
         public async Task SetEnabled(bool enabled)
         {
-            lock (_gate) _enabled = enabled;
+            lock (_gate)
+            {
+                _enabled = enabled;
+                if (!enabled) _userId = null;
+            }
             try { await _storage.SetItemAsync(EnabledKey, enabled ? "1" : "0"); }
             catch { /* best effort: this launch still honours it */ }
             if (!enabled)
@@ -511,6 +517,40 @@ namespace Strait
                 try { await prev; } catch { }
                 try { await _storage.SetItemAsync(TapKey, ""); } catch { /* best effort */ }
             }
+        }
+
+        /// <summary>
+        /// Your own user id, after your sign-in (contract B27): later <see cref="TrackEvent"/> calls carry it to your
+        /// app.event webhook (<c>userId</c>, <c>userIdHashed</c>), so you can join Strait events to your users. An email or
+        /// phone number is hashed here (SHA-256) and never leaves the device. Kept in memory only: call it again when the
+        /// game starts with a user already signed in, and <c>SetUserId(null)</c> on sign-out. Empty, longer than 128
+        /// characters or holding control characters = cleared. Ignored while switched off (<see cref="SetEnabled"/>(false)
+        /// also clears it). Never logged. Never throws.
+        /// </summary>
+        public void SetUserId(string? id)
+        {
+            UserIdFieldResult? field;
+            try { field = StraitCore.UserIdField(id); }
+            catch { field = null; } // never throws; nothing sent rather than a raw value
+            bool unknown;
+            lock (_gate)
+            {
+                if (_enabled == false) field = null;
+                _userId = field;
+                unknown = field != null && !_enabled.HasValue;
+            }
+            // The switch not read yet (SetUserId before Start): drop the id if the stored switch says off.
+            if (unknown) _ = DropUserIdIfOff(field!);
+        }
+
+        private async Task DropUserIdIfOff(UserIdFieldResult field)
+        {
+            try
+            {
+                if (await IsEnabled()) return;
+                lock (_gate) if (ReferenceEquals(_userId, field)) _userId = null;
+            }
+            catch { /* IsEnabled never throws */ }
         }
 
         /// <summary>Known to be off right now (no storage read; for synchronous checks such as the clipboard skip).</summary>
@@ -580,6 +620,8 @@ namespace Strait
                 catch { stored = null; }
                 if (StraitCore.StaleTap(stored, Now())) DropStaleTap(Now()); // B18: delete, don't just ignore
                 long at = Now();
+                UserIdFieldResult? user;
+                lock (_gate) user = _userId;
                 // B13a: built once (tap id chosen now), with an eventId so a retry is stored once. Null values are left
                 // out of the JSON; the publishable key is added at send time, never saved.
                 var ev = new Dictionary<string, object?>
@@ -588,6 +630,8 @@ namespace Strait
                     ["eventId"] = string.IsNullOrEmpty(eventId) ? StraitCore.NewEventId(at) : eventId,
                     ["value"] = value, ["currency"] = currency, ["linkId"] = linkId,
                     ["clickId"] = StraitCore.EventClickId(stored, at, clickId),
+                    // B27: the id at track time, so a queued event keeps it; never on any other call.
+                    ["userId"] = user?.UserId, ["userIdHashed"] = user?.UserIdHashed,
                 };
                 var status = await Report(ev);
                 return status >= 200 && status < 300;

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.5 (10 Nov 2026)
+
+- `SetUserId(id)` (contract B27, shared-spec ADR 0009): call it after your sign-in and `SetUserId(null)` on sign-out.
+  Later `TrackEvent` calls carry the id to your `app.event` webhook (`userId`, `userIdHashed`), so you can join Strait
+  events to your own players and see which campaigns bring paying ones. Emails and phone numbers are hashed on the phone
+  (SHA-256, `System.Security.Cryptography`, no new dependency) and never leave it raw. Memory only, never logged,
+  cleared and not sent while switched off. An event saved offline keeps the id it was tracked with. New
+  `StraitCore.UserIdField` and `StraitCore.UserIdMax = 128`. Conformance vectors v13 (`userId` group).
+
 ## 0.9.4 (9 Nov 2026)
 
 - The install now keeps its campaign. On Android's first launch the SDK sends the Google Play install referrer your
