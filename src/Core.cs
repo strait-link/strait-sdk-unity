@@ -445,6 +445,18 @@ namespace Strait
 
         public static bool ShouldRetryReport(int? status) => status == null || status == 429 || status >= 500;
 
+        /// <summary>
+        /// The engine's IPv4-only match URL in an unmatched first-launch /v1/match reply (contract B24, engine
+        /// ADR 0101), or null. Only an https URL whose path is exactly /v1/match (no query, fragment or credentials).
+        /// </summary>
+        public static string? Ipv4MatchUrl(object? value)
+        {
+            if (!(value is string s) || s.Length > 200 || !s.StartsWith("https://", StringComparison.Ordinal)) return null;
+            if (!Uri.TryCreate(s, UriKind.Absolute, out var u) || u.Scheme != "https" || string.IsNullOrEmpty(u.Host)) return null;
+            if (u.AbsolutePath != "/v1/match" || u.Query.Length > 0 || u.Fragment.Length > 0 || u.UserInfo.Length > 0) return null;
+            return s;
+        }
+
         /// <summary>C1 backoff: the first hold after a 429/5xx is 15-30 s; each one in a row doubles it, up to <see cref="RetryMaxMs"/>.</summary>
         public const long RetryBaseMs = 30_000;
         /// <summary>C1 backoff: never hold the queue longer than 1 hour (Retry-After included).</summary>

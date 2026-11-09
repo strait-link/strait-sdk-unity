@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2 (9 Nov 2026)
+
+- iPhone install matching across IPv4 / IPv6 (contract B24, engine ADR 0101): when Safari tapped the link over IPv4
+  and the game's first launch asks over IPv6, the engine's answer names its IPv4-only URL and the SDK asks once more
+  there, with the same request (same openId, same fields, nothing new collected). A match there is `probable`
+  (never `exact`). Nothing is sent while Strait is switched off, and the read-only `CheckDeferred()` never asks twice.
+
 ## 0.9.1 (8 Nov 2026)
 
 - `doctor()` (contract B23, shared-spec ADR 0002 amendment of 7 Nov): on a Strait link domain before Dashboard → Apps & stores is filled in (it answers 404 `{"error":"not configured"}`, the usual first-time state) the finding is now `app.none` with "Fill in Dashboard → Apps & stores (package name and SHA-256 fingerprint / Team ID and bundle ID), wait a minute, then check again", not `host.file_missing` ("use your Strait link domain as endpoint", which you already were). Every `app.none` fix now names those fields. 51 shared doctor vectors (was 43).
