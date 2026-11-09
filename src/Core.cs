@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
 [assembly: InternalsVisibleTo("Strait.Signature.Tests")]
@@ -62,6 +63,16 @@ namespace Strait
         public bool ClearFlag { get; }
         /// <summary>Then write this to <c>strait.installTime</c> (null = leave it).</summary>
         public string? StoreInstallTime { get; }
+    }
+
+    /// <summary>What <see cref="StraitClient.SetUserId"/> sends with later events (contract B27, <see cref="StraitCore.UserIdField"/>).</summary>
+    public sealed class UserIdFieldResult
+    {
+        public UserIdFieldResult(string userId, bool userIdHashed) { UserId = userId; UserIdHashed = userIdHashed; }
+        /// <summary>The trimmed id, or the SHA-256 hex of an email / phone number.</summary>
+        public string UserId { get; }
+        /// <summary>True when <see cref="UserId"/> is a hash.</summary>
+        public bool UserIdHashed { get; }
     }
 
     /// <summary>
@@ -210,6 +221,40 @@ namespace Strait
         /// </summary>
         public static string? InstallReferrerField(string? referrer) =>
             !string.IsNullOrEmpty(referrer) && referrer!.Length <= InstallReferrerMax ? referrer : null;
+
+        /// <summary>The longest user id the SDK sends (after trimming, UTF-16 units); a longer one is not sent (engine ADR 0110).</summary>
+        public const int UserIdMax = 128;
+
+        private static readonly Regex PhoneRe = new Regex(@"^\+?[0-9 ().-]+\z", RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// B27 (shared-spec ADR 0009): what <c>SetUserId(id)</c> sends with later events, or null (nothing sent).
+        /// Trimmed; empty, longer than <see cref="UserIdMax"/> or holding a control character = null. An email (any
+        /// <c>@</c>) is sent as the SHA-256 hex of its lower-case form, a phone number (only digits, spaces,
+        /// <c>+ ( ) . -</c>, with 8-15 digits) as the SHA-256 hex of its digits: hashed, the raw value never leaves the device.
+        /// </summary>
+        public static UserIdFieldResult? UserIdField(string? id)
+        {
+            if (id == null) return null;
+            var t = JsTrim(id);
+            if (t.Length == 0 || t.Length > UserIdMax) return null;
+            if (t.IndexOf('@') >= 0) return new UserIdFieldResult(Sha256Hex(t.ToLowerInvariant()), true);
+            var digits = new StringBuilder();
+            foreach (var c in t) if (c >= '0' && c <= '9') digits.Append(c);
+            if (PhoneRe.IsMatch(t) && digits.Length >= 8 && digits.Length <= 15) return new UserIdFieldResult(Sha256Hex(digits.ToString()), true);
+            foreach (var c in t) if (c < 0x20 || c == 0x7f) return null;
+            return new UserIdFieldResult(t, false);
+        }
+
+        /// <summary>SHA-256 of the UTF-8 bytes of <paramref name="s"/>, lower-case hex.</summary>
+        private static string Sha256Hex(string s)
+        {
+            byte[] hash;
+            using (var sha = SHA256.Create()) hash = sha.ComputeHash(Encoding.UTF8.GetBytes(s));
+            var sb = new StringBuilder(64);
+            foreach (var b in hash) sb.Append(b.ToString("x2", CultureInfo.InvariantCulture));
+            return sb.ToString();
+        }
 
         /// <summary>The strait_link id inside a Play Install Referrer string, or null.</summary>
         public static string? ParseStraitLink(string? referrer) => ReferrerParam(referrer, "strait_link");

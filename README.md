@@ -31,7 +31,7 @@ A tap opens the exact screen, and every link open and install is recorded in you
 `strait-sdk-unity` (C#)
 
 Deep links and deferred deep links for Unity games, part of [Strait](https://straitlink.in).
-Version **0.9.4**. It follows the Strait SDK contract like the React Native reference SDK,
+Version **0.9.5**. It follows the Strait SDK contract like the React Native reference SDK,
 except that `LinkEvent` has no `referralCode` yet (referrals are a preview, contract B21).
 
 The library is plain C# (`netstandard2.1`) with **no UnityEngine dependency**, so
@@ -89,7 +89,7 @@ Requires Unity 2021.2+ with **Api Compatibility Level = .NET Standard 2.1**.
 Unity **Window → Package Manager → + → Add package from git URL…**:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.4
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.5
 ```
 
 Or with [OpenUPM](https://openupm.com): `openupm add com.strait.sdk`.
@@ -134,6 +134,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B15 | `TrackEvent` carries the tap id of the last attributed open (`strait.lastTap`, ≤7 days); `clickId:` overrides | ✓ |
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B26 | Android: the install carries the raw Play referrer (`installReferrer`, 1..4096 chars, `StraitCore.InstallReferrerField`, vectors v12) on `/v1/referrer` and the `/v1/match` fallback; never on `CheckDeferred()` or while off. Strait keeps only the five `utm_*` tags; `gclid` and the rest are dropped on arrival, never stored | ✓ (the game supplies the referrer) |
+| B27 | `SetUserId(id)` after your sign-in, `SetUserId(null)` on sign-out: later `TrackEvent` bodies carry `userId` + `userIdHashed` (`StraitCore.UserIdField`, vectors v14), read when `TrackEvent` is called so a saved event keeps it; never on any other call. Emails and phone numbers are sent as SHA-256 hex, never raw; memory only, never logged; ignored while off and cleared by `SetEnabled(false)` | ✓ |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 | B19 | iPhone paste handoff, chosen in the Dashboard and read live from the `/v1/match` reply (`ios.pasteHandoff`): device matching first, then detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
@@ -258,6 +259,27 @@ An event that can't be sent (offline, 429 or a server error) is kept with the sa
 `strait.pendingOpens` and sent later, for up to 7 days (on `Start`, when the game comes back to the front, or
 after the next report that gets through); `TrackEvent` then returns `false`, and `PendingOpenReports()`
 counts it. The tap id is chosen when you call, not at retry time. Refunds are not supported yet (contract B13a). Revenue you must trust (billing, payouts) belongs on your server with the secret key: the app's publishable key is public, so anyone who can guess an order id could send it first.
+
+### Your user on events (`SetUserId`)
+
+```csharp
+StraitLinks.Client.SetUserId(user.Id);   // after your sign-in, and when the game starts with a user already signed in
+StraitLinks.Client.SetUserId(null);      // on sign-out
+```
+
+Later `TrackEvent` calls carry this id to your `app.event` webhook (`userId`, `userIdHashed`), so you can
+join Strait's tap, link and campaign to your own players and see which campaigns bring paying ones
+(contract B27). It is kept in memory only, never logged, ignored while `SetEnabled(false)` (which also
+clears it), and not sent with app opens or installs. An event saved offline keeps the id it was tracked with on the
+device until it is sent (up to 7 days, in `strait.pendingOpens`; deleted on opt-out).
+
+Emails and phone numbers never leave the phone: an id with `@` is sent as the SHA-256 hex of its
+lower-cased form, one made only of digits, spaces and `+ ( ) . -` with 8-15 digits as the SHA-256 hex of
+its digits, with `userIdHashed: true`. To join, hash your own value the same way
+(`sha256("priya@example.com")`, `sha256("919876543210")`). A plain numeric id of 8-15 digits is hashed
+too; prefix it (`u_12345678`) to keep it readable. Ids longer than 128 characters or holding control
+characters are not sent (and clear the previous one). Anyone with your publishable key can send any
+`userId`, so treat it as a claim, like revenue sent from the game.
 
 ### Check your setup (doctor)
 
@@ -579,13 +601,13 @@ Links that carry their own destination still open your screens. A Strait short l
 ## API summary
 
 - `StraitCore`: `BrowserScreenWidth`, `PortraitScreenWidth`, `DeviceClassForSize`, `DeviceClassForModel`, `SplitUrl`, `ParseStraitLink`, `ParseStraitClick`, `TakeClickId`,
-  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `RetryDelayMs`, `NewOpenId`, `NewEventId`, `FirstLaunchState`
-  (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days).
+  `ClassifyUrl`, `NormalizeLinkHosts`, `ParseHandoffUrl`, `PruneOpenQueue`, `ShouldRetryReport`, `RetryDelayMs`, `NewOpenId`, `NewEventId`, `FirstLaunchState`, `UserIdField`
+  (pure, vector-tested; `OpenQueueMax = 100`, `OpenQueueMaxAgeMs` = 7 days, `UserIdMax = 128`).
   `AppStateTracker` (`ResumeWindowMs = 2000`, `TransientPauseMs = 1000`).
 - `StraitClient`: `Start(initialUrl)`, `HandleUrl(raw)`, `OnAppState(state[, nowMs])`,
   `event OnLink` (replays past events), `event OnLinkStart`, `Events`, `CheckDeferred()`
   (doesn't touch the once-per-install flag), `ReportFingerprint()`, `CompareFingerprint()`,
-  `TrackEvent(name, value, currency, linkId, clickId, eventId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `SetEnabled(enabled)`, `IsEnabled()`, `Stop()`.
+  `TrackEvent(name, value, currency, linkId, clickId, eventId)`, `ClaimHandoff(text)`, `PendingOpenReports()`, `FlushOpenReports()`, `Doctor(appId, certSha256, log)`, `SetEnabled(enabled)`, `IsEnabled()`, `SetUserId(id)`, `Stop()`.
 - `Doctor`: `Findings(publishableKey, endpoint, platform, appId, certSha256, file)` (pure, B23) → `DoctorReport {Ok, Findings}` of `DoctorFinding {Id, Severity, Title, Fix}`.
 - `LinkEvent`: `Id, Kind, Route, AppState, Matched, Reason, RawUrl, Url, Path, Params, LinkId, Ms, At`.
   These are the React Native SDK's fields and wire values, minus `referralCode`.

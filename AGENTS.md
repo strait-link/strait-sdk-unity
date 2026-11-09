@@ -10,7 +10,7 @@ C# library for Unity 2021.2+ (Api Compatibility Level .NET Standard 2.1). The ga
 Unity → Window → Package Manager → + → Add package from git URL:
 
 ```text
-https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.4
+https://github.com/strait-link/strait-sdk-unity.git?path=src#v0.9.5
 ```
 
 Keep `?path=src`. Android also needs `com.android.installreferrer:installreferrer:2.2` in Gradle (custom
@@ -40,6 +40,10 @@ await Client.Start(Application.absoluteURL);                           // launch
 
 Forward `OnApplicationPause` / `OnApplicationFocus` to `Client.OnAppState(...)`. On WebGL set
 `Transport = new UnityWebRequestTransport()`.
+
+Conversions: `await Client.TrackEvent("purchase", value: 4.99, currency: "USD", eventId: order.Id)` attaches the tap id
+automatically. Your user: `Client.SetUserId(user.Id)` after sign-in, `Client.SetUserId(null)` on sign-out; later events
+carry it to the `app.event` webhook (emails and phone numbers are hashed on the device, contract B27).
 
 ## Stop and ask the human
 

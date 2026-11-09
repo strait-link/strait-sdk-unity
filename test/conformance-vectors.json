@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 14,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -7,7 +7,8 @@
     "OPEN_QUEUE_MAX": 100,
     "OPEN_QUEUE_MAX_AGE_MS": 604800000,
     "ATTRIBUTION_WINDOW_MS": 604800000,
-    "INSTALL_REFERRER_MAX": 4096
+    "INSTALL_REFERRER_MAX": 4096,
+    "USER_ID_MAX": 128
   },
   "screenWidth": [
     {
@@ -2445,6 +2446,216 @@
     {
       "input": null,
       "expected": null
+    }
+  ],
+  "userId": [
+    {
+      "name": "opaque id",
+      "input": "user_4821",
+      "expected": {
+        "userId": "user_4821",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "trimmed",
+      "input": "  user_4821 ",
+      "expected": {
+        "userId": "user_4821",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "uuid",
+      "input": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+      "expected": {
+        "userId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "email, lower-cased",
+      "input": "Priya@Example.COM",
+      "expected": {
+        "userId": "6bdb7e961d54ddc243ec721e6e211ac0a179b19a9ce2ad52a418198e146e69fe",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email, trimmed (tab)",
+      "input": " priya@example.com\t",
+      "expected": {
+        "userId": "6bdb7e961d54ddc243ec721e6e211ac0a179b19a9ce2ad52a418198e146e69fe",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email, non-ASCII lower-cased",
+      "input": "JOSÉ@Example.com",
+      "expected": {
+        "userId": "b0a53cf19e34d05b57bced7365c6b00ddbe38d62957e863de2a66a56c3b42cea",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "anything with @ is hashed",
+      "input": "@priya",
+      "expected": {
+        "userId": "b71f7aeae60f39ce8549e39f77657c5fd415d890b212f1711ab54f800150b767",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "phone with country code",
+      "input": "+91 98765-43210",
+      "expected": {
+        "userId": "92b5072176e723878b5e06ff3ca61898e4eb74e8c46642a0f2db800b17364ab0",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "same phone, digits only = same hash",
+      "input": "919876543210",
+      "expected": {
+        "userId": "92b5072176e723878b5e06ff3ca61898e4eb74e8c46642a0f2db800b17364ab0",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "phone with brackets and dots",
+      "input": "(555) 123.4567",
+      "expected": {
+        "userId": "3c95277da5fd0da6a1a44ee3fdf56d20af6c6d242695a40e18e6e90dc3c5872c",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "8 digits = phone",
+      "input": "12345678",
+      "expected": {
+        "userId": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "7 digits = an id",
+      "input": "1234567",
+      "expected": {
+        "userId": "1234567",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "short number = an id",
+      "input": "4821",
+      "expected": {
+        "userId": "4821",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "16 digits = an id",
+      "input": "1234567890123456",
+      "expected": {
+        "userId": "1234567890123456",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "digits with a letter = an id",
+      "input": "98765 43210a",
+      "expected": {
+        "userId": "98765 43210a",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "128 units",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "expected": {
+        "userId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "129 units = not sent",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "expected": null
+    },
+    {
+      "name": "128 units ending in an emoji (2 units)",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+      "expected": {
+        "userId": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "129 units ending in an emoji = not sent",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx😀",
+      "expected": null
+    },
+    {
+      "name": "newline inside = not sent",
+      "input": "user\n4821",
+      "expected": null
+    },
+    {
+      "name": "DEL inside = not sent",
+      "input": "user4821",
+      "expected": null
+    },
+    {
+      "name": "empty = not sent",
+      "input": "",
+      "expected": null
+    },
+    {
+      "name": "spaces only = not sent",
+      "input": "   ",
+      "expected": null
+    },
+    {
+      "name": "null = not sent",
+      "input": null,
+      "expected": null
+    },
+    {
+      "name": "BOM before an id is trimmed",
+      "input": "﻿user_4821",
+      "expected": {
+        "userId": "user_4821",
+        "userIdHashed": false
+      }
+    },
+    {
+      "name": "BOM before an email is trimmed, then hashed",
+      "input": "﻿priya@example.com",
+      "expected": {
+        "userId": "6bdb7e961d54ddc243ec721e6e211ac0a179b19a9ce2ad52a418198e146e69fe",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "unit separator at the end = control = not sent",
+      "input": "user_4821\u001f",
+      "expected": null
+    },
+    {
+      "name": "zero-width non-joiner after @ = still an email",
+      "input": "priya@‌example.com",
+      "expected": {
+        "userId": "353bddf3bf4939743e9846c62550c0a688bf50c7e08316ad0ad894e13a994c56",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email holding a newline = hashed (the @ check first)",
+      "input": "priya\n@example.com",
+      "expected": {
+        "userId": "356086f3ff7ca1577972c0bd41d89c8d44510df9c41fda5d5e10cbbf576e13c0",
+        "userIdHashed": true
+      }
     }
   ]
 }
