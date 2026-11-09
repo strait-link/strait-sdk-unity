@@ -27,7 +27,7 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(11, v.GetProperty("version").GetInt32());
+            Assert.Equal(12, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
                          "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
@@ -42,12 +42,26 @@ namespace Strait.Tests
             Assert.Equal(StraitCore.OpenQueueMax, c.GetProperty("OPEN_QUEUE_MAX").GetInt32());
             Assert.Equal(StraitCore.OpenQueueMaxAgeMs, c.GetProperty("OPEN_QUEUE_MAX_AGE_MS").GetInt64());
             Assert.Equal(StraitCore.AttributionWindowMs, c.GetProperty("ATTRIBUTION_WINDOW_MS").GetInt64());
-            Assert.Equal(5, c.EnumerateObject().Count());
+            Assert.Equal(StraitCore.InstallReferrerMax, c.GetProperty("INSTALL_REFERRER_MAX").GetInt32());
+            Assert.Equal(6, c.EnumerateObject().Count());
             Assert.Equal(2000, AppStateTracker.ResumeWindowMs);
             Assert.Equal(1000, AppStateTracker.TransientPauseMs);
             Assert.Equal(100, StraitCore.OpenQueueMax);
             Assert.Equal(604_800_000L, StraitCore.OpenQueueMaxAgeMs);
             Assert.Equal(604_800_000L, StraitCore.AttributionWindowMs);
+        }
+
+        [Fact]
+        public void InstallReferrerVectors()
+        {
+            var cases = Vectors().GetProperty("installReferrer");
+            Assert.True(cases.GetArrayLength() >= 9);
+            int i = 0;
+            foreach (var c in cases.EnumerateArray())
+            {
+                Assert.True(StrOrNull(c.GetProperty("expected")) == StraitCore.InstallReferrerField(StrOrNull(c.GetProperty("input"))), $"installReferrer #{i}");
+                i++;
+            }
         }
 
         [Fact]
