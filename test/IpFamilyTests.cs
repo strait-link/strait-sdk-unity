@@ -42,13 +42,20 @@ namespace Strait.Tests
             public List<string> MatchHosts => Calls.Where(c => c.Path == "/v1/match").Select(c => c.Host).ToList();
         }
 
-        private static (StraitClient, List<LinkEvent>) Make(Engine engine)
+        private sealed class Clip : IStraitClipboard
+        {
+            public int Touched;
+            public Task<bool> HasProbableWebUrlAsync() { Touched++; return Task.FromResult(true); }
+            public Task<string?> ReadTextAsync() { Touched++; return Task.FromResult<string?>("https://links.test/h/AbCdEfGhIjKlMnOpQrStUv"); }
+        }
+
+        private static (StraitClient, List<LinkEvent>) Make(Engine engine, IStraitClipboard? clip = null)
         {
             var c = new StraitClient(new StraitConfig
             {
                 PublishableKey = PK, Endpoint = Endpoint, Platform = "ios", Storage = new MemoryKeyValueStore(), Transport = engine,
                 DeviceFields = () => new DeviceFields { ScreenWidth = 390, PixelRatio = 3, Language = "en-IN", Timezone = "Asia/Kolkata" },
-                Clock = () => 1_000_000,
+                Clock = () => 1_000_000, Clipboard = clip,
             });
             var events = new List<LinkEvent>();
             c.OnLink += events.Add;
@@ -134,6 +141,23 @@ namespace Strait.Tests
             e.OnCall = host => { if (host == "links.test") _ = s.SetEnabled(false); }; // the switch flips synchronously
             await s.Start(null);
             Assert.DoesNotContain("v4.straitlink.test", e.MatchHosts);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task PasteHandoffFollowsTheFirstAnswer(bool ipv4AskMatches)
+        {
+            var e = new Engine();
+            e.Routes["links.test/v1/match"] = MissV6().Replace("\"pasteHandoff\":false", "\"pasteHandoff\":true");
+            e.Routes["v4.straitlink.test/v1/match"] = ipv4AskMatches ? HitV4 : "{\"matched\":false}";
+            e.Routes["links.test/v1/handoff/claim"] = "{\"matched\":true,\"longUrl\":\"https://shop.example/x\",\"linkId\":\"lnk_1\",\"matchMethod\":\"clipboard\"}";
+            var clip = new Clip();
+            var (s, events) = Make(e, clip);
+            await s.Start(null);
+            Assert.Equal(!ipv4AskMatches, e.Calls.Any(c => c.Path == "/v1/handoff/claim"));
+            Assert.Equal(!ipv4AskMatches, clip.Touched > 0);
+            Assert.Equal(ipv4AskMatches ? "lnk_42" : "lnk_1", Assert.Single(events).LinkId);
         }
 
         [Fact]
