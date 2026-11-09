@@ -29,7 +29,7 @@ namespace Strait.Tests
             var v = Vectors();
             Assert.Equal(12, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay", "installReferrer" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
