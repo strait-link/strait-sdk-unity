@@ -226,9 +226,15 @@ namespace Strait
         public const int UserIdMax = 128;
 
         /// <summary>
+        /// B27 v16 (shared-spec ADR 0011): lower case per code point, no context, no language, so every runtime agrees:
+        /// <c>İ</c> → <c>i̇</c> (i + U+0307; <c>ToLowerInvariant</c> leaves <c>İ</c> as it is) and <c>Σ</c> → <c>σ</c> first.
+        /// </summary>
+        internal static string LowerEmail(string s) => s.Replace("\u0130", "i\u0307").Replace('\u03A3', '\u03C3').ToLowerInvariant();
+
+        /// <summary>
         /// B27 (shared-spec ADR 0009, ADR 0010): what <c>SetUserId(id)</c> sends with later events, or null (nothing sent).
         /// Trimmed; empty, longer than <see cref="UserIdMax"/> or holding a control character = null. An email (any
-        /// <c>@</c>, <c>＠</c> or <c>﹫</c>) is sent as the SHA-256 hex of its lower-case form, a phone number
+        /// <c>@</c>, <c>＠</c> or <c>﹫</c>) is sent as the SHA-256 hex of <see cref="LowerEmail"/> of it, a phone number
         /// (<see cref="PhoneNumberForm"/>) as the SHA-256 hex of its canonical form: hashed, the raw value never leaves the device.
         /// </summary>
         public static UserIdFieldResult? UserIdField(string? id)
@@ -236,7 +242,7 @@ namespace Strait
             if (id == null) return null;
             var t = JsTrim(id);
             if (t.Length == 0 || t.Length > UserIdMax) return null;
-            if (t.IndexOf('@') >= 0 || t.IndexOf('\uFF20') >= 0 || t.IndexOf('\uFE6B') >= 0) return new UserIdFieldResult(Sha256Hex(t.ToLowerInvariant()), true);
+            if (t.IndexOf('@') >= 0 || t.IndexOf('\uFF20') >= 0 || t.IndexOf('\uFE6B') >= 0) return new UserIdFieldResult(Sha256Hex(LowerEmail(t)), true);
             var phone = PhoneNumberForm(t);
             if (phone != null) return new UserIdFieldResult(Sha256Hex(phone), true);
             foreach (var c in t) if (c < 0x20 || c == 0x7f) return null;
