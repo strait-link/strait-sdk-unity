@@ -1,5 +1,5 @@
 {
-  "version": 16,
+  "version": 17,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -8,7 +8,13 @@
     "OPEN_QUEUE_MAX_AGE_MS": 604800000,
     "ATTRIBUTION_WINDOW_MS": 604800000,
     "INSTALL_REFERRER_MAX": 4096,
-    "USER_ID_MAX": 128
+    "USER_ID_MAX": 128,
+    "RETURN_DAYS": [
+      1,
+      7,
+      30
+    ],
+    "DAY_MS": 86400000
   },
   "screenWidth": [
     {
@@ -3117,6 +3123,222 @@
         "userId": "51a1fb3de586fd366249229553571339587eafd784771781c1cd72224c07db9a",
         "userIdHashed": true
       }
+    }
+  ],
+  "returnNote": [
+    {
+      "name": "day 0 (install day): nothing",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800086399999,
+      "expected": null
+    },
+    {
+      "name": "day 1 starts exactly 24 h after the install open",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800086400000,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "last ms of day 1",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800172799999,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "day 2: nothing",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800172800000,
+      "expected": null
+    },
+    {
+      "name": "day 6: nothing",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800604799999,
+      "expected": null
+    },
+    {
+      "name": "day 7",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800608400000,
+      "expected": {
+        "day": 7,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r7-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "day 7 already sent",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[1,7]}",
+      "now": 1800604800000,
+      "expected": null
+    },
+    {
+      "name": "day 7 when only day 1 was sent",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[1]}",
+      "now": 1800604800000,
+      "expected": {
+        "day": 7,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r7-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "day 29: nothing",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1802591999999,
+      "expected": null
+    },
+    {
+      "name": "day 30",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1802592000000,
+      "expected": {
+        "day": 30,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r30-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "day 30 already sent",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[30]}",
+      "now": 1802592000001,
+      "expected": null
+    },
+    {
+      "name": "day 31: nothing, ever again",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1802678400000,
+      "expected": null
+    },
+    {
+      "name": "day 365: nothing",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1831536000000,
+      "expected": null
+    },
+    {
+      "name": "upper-case tap id is sent lower-case",
+      "stored": "{\"clickId\":\"3F2A9C1E-7B4D-4E8A-9C0F-1A2B3C4D5E6F\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800086400000,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "no sent field = nothing sent yet",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000}",
+      "now": 1800086400000,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "sent not an array = nothing sent yet",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":\"1\"}",
+      "now": 1800086400000,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "only numbers count as sent",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[\"1\"]}",
+      "now": 1800086400000,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "fractional install time",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000.5,\"sent\":[]}",
+      "now": 1800086400000.5,
+      "expected": {
+        "day": 1,
+        "clickId": "3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f",
+        "openId": "r1-3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f"
+      }
+    },
+    {
+      "name": "clock moved back (now before the install): nothing",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1799999999999,
+      "expected": null
+    },
+    {
+      "name": "not a uuid",
+      "stored": "{\"clickId\":\"not-a-uuid\",\"at\":1800000000000,\"sent\":[]}",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "no tap id",
+      "stored": "{\"at\":1800000000000}",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "install time 0",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":0,\"sent\":[]}",
+      "now": 86400000,
+      "expected": null
+    },
+    {
+      "name": "install time negative",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":-5,\"sent\":[]}",
+      "now": 86400000,
+      "expected": null
+    },
+    {
+      "name": "install time as a string",
+      "stored": "{\"clickId\":\"3f2a9c1e-7b4d-4e8a-9c0f-1a2b3c4d5e6f\",\"at\":\"1800000000000\",\"sent\":[]}",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "unreadable JSON",
+      "stored": "{\"clickId\":",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "JSON null",
+      "stored": "null",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "JSON array",
+      "stored": "[]",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "empty (cleared by opt-out or a new install)",
+      "stored": "",
+      "now": 1800086400000,
+      "expected": null
+    },
+    {
+      "name": "missing",
+      "stored": null,
+      "now": 1800086400000,
+      "expected": null
     }
   ]
 }

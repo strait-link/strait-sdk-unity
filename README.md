@@ -135,6 +135,7 @@ safe to put in your app. Never put your secret key (`st_live_…`) in an app.
 | B16 | Every attributed open supplies the tap id: the `clickId` in the `/v1/resolve`, `/v1/match` and `/v1/referrer` replies is remembered (`ReplyClickId`) | ✓ |
 | B26 | Android: the install carries the raw Play referrer (`installReferrer`, 1..4096 chars, `StraitCore.InstallReferrerField`, vectors v12) on `/v1/referrer` and the `/v1/match` fallback; never on `CheckDeferred()` or while off. Strait keeps only the five `utm_*` tags; `gclid` and the rest are dropped on arrival, never stored | ✓ (the game supplies the referrer) |
 | B27 | `SetUserId(id)` after your sign-in, `SetUserId(null)` on sign-out: later `TrackEvent` bodies carry `userId` + `userIdHashed` (`StraitCore.UserIdField`, vectors v14), read when `TrackEvent` is called so a saved event keeps it; never on any other call. Emails and phone numbers are sent as SHA-256 hex, never raw; memory only, never logged; ignored while off and cleared by `SetEnabled(false)` | ✓ |
+| B28 | "Came back" notes: the install's own first open keeps its tap id once (`strait.installTap`, `StraitCore.InstallTapValue`; cleared at a first launch, never overwritten by later taps); on `Start` and `OnAppState("active")`, `StraitCore.ReturnNote` (vectors v17) sends at most one note on day 1, 7 and 30 after the install: `POST /v1/open {kind:"return", day, clickId, openId:"r<day>-<tap id>"}`, marked sent first, saved and retried like an open; nothing while off, and `SetEnabled(false)` deletes the install tap | ✓ (not released yet) |
 | B17 | `screenWidth` is the portrait (shorter-side) width in any orientation: `StraitCore.PortraitScreenWidth(w, h)` | ✓ (the game supplies the size, see below) |
 | B18 | Only host + path (+ the first `utm_source`) of a reported URL go to `/v1/open` / `/v1/resolve` or into `strait.pendingOpens` (`StraitCore.ReportUrl`; older queued reports stripped on read); an expired remembered tap is deleted at `Start` and by `TrackEvent` (`StraitCore.StaleTap`); an empty `PublishableKey` or `Endpoint` throws `ArgumentException` | ✓ |
 | B19 | iPhone paste handoff, chosen in the Dashboard and read live from the `/v1/match` reply (`ios.pasteHandoff`): device matching first, then detect without a prompt, read only when a web URL is likely, `StraitCore.ParseHandoffUrl`, `POST /v1/handoff/claim`; `ClaimHandoff(text)` for a paste button | ✓ (C# core + client CI-tested; the native `StraitClipboard.mm` is not compiled in CI, see below) |
@@ -164,6 +165,13 @@ Navigation never waits for a report. The first launch of an install is marked as
 such, so dashboards can tell **new users** (installed and opened) from **existing
 users** (already had the game). The deferred check is only marked done once the
 server answered, so an offline first launch is retried on the next launch.
+
+**"Came back" notes (contract B28).** So the dashboard can show whether the people a campaign brought came back
+(D1 / D7 / D30), the SDK sends at most three tiny notes per install, ever: the first time the game starts or comes to
+the front on day 1, day 7 and day 30 after the install. Each note carries only the install's tap id (Strait's own
+random id for the tap that brought the install, which the SDK already keeps), the day number, the platform and the
+SDK version. No device id, no user id, no URL. Installs that no Strait link brought send nothing. Nothing is
+sent while switched off, and `SetEnabled(false)` deletes the stored install tap, so that install never sends a note again.
 
 ## Wire it into a game
 
@@ -597,7 +605,7 @@ public sealed class UnityWebRequestTransport : IStraitRetryAfterTransport
 
 ## User consent / opt-out
 
-If your game asks for consent first (for example under India's DPDP Act or a GDPR consent flow in the EU), call `await Client.SetEnabled(false)` until the person agrees: Strait then sends no open reports or events, does no install matching, and deletes reports waiting on the device. The choice is kept across launches in your `Storage` (use `PlayerPrefsStore`, not the in-memory default); `SetEnabled(true)` turns it back on (default: on) and `IsEnabled()` reads it. Call it before `Start` on a first launch so the deferred check waits for the answer; `SetEnabled(true)` then runs it.
+If your game asks for consent first (for example under India's DPDP Act or a GDPR consent flow in the EU), call `await Client.SetEnabled(false)` until the person agrees: Strait then sends no open reports or events, does no install matching, and deletes reports waiting on the device (and the install tap behind the day 1 / 7 / 30 "came back" notes, which then never resume). The choice is kept across launches in your `Storage` (use `PlayerPrefsStore`, not the in-memory default); `SetEnabled(true)` turns it back on (default: on) and `IsEnabled()` reads it. Call it before `Start` on a first launch so the deferred check waits for the answer; `SetEnabled(true)` then runs it.
 Links that carry their own destination still open your screens. A Strait short link is looked up through the engine's `/v1/lookup`, which records nothing (no tap, no open, no tap id), so it still opens the right screen; only if that lookup fails (offline) does it come back `Matched = false, Reason = "disabled"`. Whether you need consent, and for what, is a question for your own legal advice.
 
 ## API summary

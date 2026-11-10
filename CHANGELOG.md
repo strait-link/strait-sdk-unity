@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- "Came back" notes (contract B28, shared-spec ADR 0012): the SDK keeps the tap id of the link that brought the
+  install (`strait.installTap`, written once by the install's first open) and sends at most three notes per install,
+  ever: on day 1, 7 and 30 after the install, the first time the game starts or comes to the front that day
+  (`POST /v1/open {kind: "return", day, clickId, openId: "r<day>-<tap id>"}`, saved and retried like an open report).
+  No new identifier. Nothing while switched off; `SetEnabled(false)` also deletes the install tap.
+  Feeds the dashboard's Came back D1 / D7 / D30 columns. Conformance vectors v17 (`returnNote`).
+  **Not released yet:** waits for the privacy wording OK.
+
 ## 0.9.7 (10 Nov 2026)
 
 - `setUserId` lower-cases an email the same way in every Strait SDK and the engine (contract B27 v16, shared-spec

@@ -65,6 +65,18 @@ namespace Strait
         public string? StoreInstallTime { get; }
     }
 
+    /// <summary>The "came back" note due now (contract B28, <see cref="StraitCore.ReturnNote"/>).</summary>
+    public sealed class ReturnNoteResult
+    {
+        public ReturnNoteResult(int day, string clickId, string openId) { Day = day; ClickId = clickId; OpenId = openId; }
+        /// <summary>1, 7 or 30.</summary>
+        public int Day { get; }
+        /// <summary>The install's tap id, lower-case.</summary>
+        public string ClickId { get; }
+        /// <summary><c>r&lt;day&gt;-&lt;clickId&gt;</c>: a retry counts once.</summary>
+        public string OpenId { get; }
+    }
+
     /// <summary>What <see cref="StraitClient.SetUserId"/> sends with later events (contract B27, <see cref="StraitCore.UserIdField"/>).</summary>
     public sealed class UserIdFieldResult
     {
@@ -471,6 +483,52 @@ namespace Strait
             if (reply is string r && ClickIdRe.IsMatch(r)) return r.ToLowerInvariant();
             if (fallback != null && ClickIdRe.IsMatch(fallback)) return fallback.ToLowerInvariant();
             return null;
+        }
+
+        /// <summary>B28: the days after the install that send a "came back" note.</summary>
+        public static readonly int[] ReturnDays = { 1, 7, 30 };
+        /// <summary>A day in ms (B28).</summary>
+        public const long DayMs = 24L * 60 * 60 * 1000;
+
+        /// <summary>Storage value for the install's tap (key <c>strait.installTap</c>, B28): <c>{"clickId":…,"at":&lt;epoch ms&gt;,"sent":[…]}</c>.</summary>
+        public static string InstallTapValue(string clickId, double at, IEnumerable<int>? sent = null) =>
+            StraitJson.Serialize(new[]
+            {
+                new KeyValuePair<string, object?>("clickId", clickId.ToLowerInvariant()),
+                new KeyValuePair<string, object?>("at", at),
+                new KeyValuePair<string, object?>("sent", new List<int>(sent ?? Array.Empty<int>())),
+            });
+
+        /// <summary>
+        /// The "came back" note due now (contract B28), or null: the install tap (<paramref name="stored"/>, see
+        /// <see cref="InstallTapValue"/>) is readable, <c>day</c> = whole days since the install open is 1, 7 or 30, and
+        /// that day was not sent yet. At most three per install, ever.
+        /// </summary>
+        public static ReturnNoteResult? ReturnNote(string? stored, double now)
+        {
+            var tap = InstallTap(stored);
+            if (tap == null || now < tap.Value.At) return null;
+            double days = Math.Floor((now - tap.Value.At) / DayMs);
+            int day = days <= 30 ? (int)days : -1;
+            if (Array.IndexOf(ReturnDays, day) < 0 || tap.Value.Sent.Contains(day)) return null;
+            var id = tap.Value.ClickId.ToLowerInvariant();
+            return new ReturnNoteResult(day, id, "r" + day + "-" + id);
+        }
+
+        /// <summary>The parsed install tap: a uuid tap id, a finite <c>at</c> &gt; 0, and the days sent (numbers only).</summary>
+        internal static (string ClickId, double At, List<int> Sent)? InstallTap(string? stored)
+        {
+            if (string.IsNullOrEmpty(stored)) return null;
+            object? parsed;
+            try { parsed = StraitJson.Parse(stored!); }
+            catch (Exception) { return null; }
+            if (!(parsed is Dictionary<string, object?> tap)) return null;
+            if (!tap.TryGetValue("clickId", out var c) || !(c is string clickId) || !ClickIdRe.IsMatch(clickId)) return null;
+            if (!tap.TryGetValue("at", out var a) || !(a is double at) || double.IsNaN(at) || double.IsInfinity(at) || at <= 0) return null;
+            var sent = new List<int>();
+            if (tap.TryGetValue("sent", out var s) && s is List<object?> list)
+                foreach (var d in list) if (d is double n && n == Math.Floor(n) && Math.Abs(n) < int.MaxValue) sent.Add((int)n);
+            return (clickId, at, sent);
         }
 
         /// <summary>Whether a failed report should be kept for retry: no answer (null), 429 or 5xx.</summary>

@@ -221,6 +221,11 @@ namespace Strait
         public const string InstallTimeKey = "strait.installTime";
         /// <summary>Storage key of the opt-out switch (<see cref="SetEnabled"/>): "0" = off; absent or unreadable = on.</summary>
         public const string EnabledKey = "strait.enabled";
+        /// <summary>
+        /// Storage key of the install's tap (contract B28): <c>{"clickId":…,"at":…,"sent":[…]}</c>, or empty. Written once by
+        /// the install's own first open, never by later taps; feeds the day 1 / 7 / 30 "came back" notes.
+        /// </summary>
+        public const string InstallTapKey = "strait.installTap";
 
         private readonly StraitConfig _config;
         private readonly string _base;
@@ -241,6 +246,8 @@ namespace Strait
         // sends again; any other answer ends the wait; no answer adds none. In memory (guarded by _gate).
         private int _failures;
         private long _holdUntil;
+        /// <summary>B28: the running "came back" check (guarded by _gate): one at a time.</summary>
+        private Task? _returnCheck;
         // Remembered-tap writes are chained so a TrackEvent right after an open sees them.
         private Task _tapWrite = Task.CompletedTask;
         private readonly object _tapGate = new object();
@@ -330,6 +337,8 @@ namespace Strait
             if (state.ClearFlag) await Write(DeferredFlag, ""); // first, so dying in between is still a first launch
             if (state.StoreInstallTime != null) await Write(InstallTimeKey, state.StoreInstallTime);
             bool firstLaunch = state.FirstLaunch;
+            // B28: a new install (or a restored backup of another one) starts without an install tap.
+            if (firstLaunch) await Write(InstallTapKey, "");
             if (hasInitial)
             {
                 // Opened by a link on first launch = the user's intent right now: no deferred
@@ -347,6 +356,7 @@ namespace Strait
                     if (await IsEnabled() && Interlocked.Exchange(ref _deferredDue, 0) == 1) await FirstCheck();
                 }
             }
+            _ = CheckReturn();
             _ = Flush();
         }
 
@@ -381,13 +391,17 @@ namespace Strait
 
         /// <summary>
         /// Feed lifecycle changes: "active", "background" or "inactive" (<see cref="AppLifecycle"/>).
-        /// Becoming active also sends any saved open reports.
+        /// Becoming active also sends any saved open reports (and a due "came back" note, B28).
         /// </summary>
         public void OnAppState(string state, long nowMs)
         {
             if (_stopped || state == null) return;
             _tracker.OnState(state, nowMs);
-            if (state == AppLifecycle.Active) _ = Flush();
+            if (state == AppLifecycle.Active)
+            {
+                _ = Flush();
+                _ = CheckReturn();
+            }
         }
 
         /// <summary>Same as <see cref="OnAppState(string, long)"/> using the configured clock.</summary>
@@ -516,6 +530,8 @@ namespace Strait
             {
                 try { await prev; } catch { }
                 try { await _storage.SetItemAsync(TapKey, ""); } catch { /* best effort */ }
+                // B28: an install that opted out never sends a "came back" note again.
+                try { await _storage.SetItemAsync(InstallTapKey, ""); } catch { /* best effort */ }
             }
         }
 
@@ -647,7 +663,8 @@ namespace Strait
         /// Remember the tap id of an attributed open (B15), or forget it (null) when a newer attributed
         /// open has no tap id the SDK knows. Never throws; failures are ignored.
         /// </summary>
-        private void NoteTap(string? clickId, long at)
+        /// <param name="install">This open is the install's own first open: its tap id is kept once as the install tap (B28), never overwritten.</param>
+        private void NoteTap(string? clickId, long at, bool install = false)
         {
             var value = clickId != null ? StraitCore.RememberTap(clickId, at) : "";
             lock (_tapGate)
@@ -660,7 +677,14 @@ namespace Strait
             {
                 try { await prev; } catch { }
                 // Checked inside the chain: a reply that lands after SetEnabled(false) keeps no tap.
-                try { if (await IsEnabled()) await _storage.SetItemAsync(TapKey, value); } catch { /* best effort */ }
+                try
+                {
+                    if (!await IsEnabled()) return;
+                    await _storage.SetItemAsync(TapKey, value);
+                    if (install && clickId != null && string.IsNullOrEmpty(await _storage.GetItemAsync(InstallTapKey)))
+                        await _storage.SetItemAsync(InstallTapKey, StraitCore.InstallTapValue(clickId, at));
+                }
+                catch { /* best effort */ }
             }
         }
 
@@ -739,7 +763,7 @@ namespace Strait
                         ev.Matched = matched;
                         ev.Reason = matched ? null : (Str(res.Json, "reason") ?? Str(res.Json, "error"));
                         if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
-                        if (matched) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0);
+                        if (matched) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0, firstLaunch);
                         ev.LinkId = Str(res.Json, "linkId");
                         if (!IsTrue(res.Json, "recorded"))
                         {
@@ -764,7 +788,7 @@ namespace Strait
                 }
                 else
                 {
-                    if (on && c.ClickId != null) NoteTap(c.ClickId, t0);
+                    if (on && c.ClickId != null) NoteTap(c.ClickId, t0, firstLaunch);
                     // Navigation never waits for the report.
                     if (on) _ = Report(NewReport(id, "direct", c.Route, appState, platform, StraitCore.ReportUrl(c.Url), c.ClickId, true, firstLaunch, t0));
                     ev.Route = c.Route;
@@ -860,7 +884,7 @@ namespace Strait
                             ev.Matched = true;
                             SetDestination(ev, Str(res.Json, "longUrl"));
                             ev.LinkId = Str(res.Json, "linkId") ?? linkId;
-                            if (record) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId"), referrerClick), t0);
+                            if (record) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId"), referrerClick), t0, true);
                             done = true;
                         }
                     }
@@ -897,7 +921,7 @@ namespace Strait
                     ev.Matched = matched;
                     ev.Reason = matched ? null : "no_match";
                     if (matched) SetDestination(ev, Str(res.Json, "longUrl"));
-                    if (record && matched) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0);
+                    if (record && matched) NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0, true);
                     ev.LinkId = Str(res.Json, "linkId");
                 }
             }
@@ -922,7 +946,7 @@ namespace Strait
                     try
                     {
                         var res = await Claim(token, id, t0);
-                        if (IsTrue(res.Json, "matched")) ApplyClaim(ev, res, t0);
+                        if (IsTrue(res.Json, "matched")) ApplyClaim(ev, res, t0, true);
                         // Not claimable: keep the device match result.
                     }
                     catch
@@ -972,14 +996,14 @@ namespace Strait
                 Kv("sdkVersion", WireSdkVersion),
             });
 
-        private void ApplyClaim(LinkEvent ev, Response res, long t0)
+        private void ApplyClaim(LinkEvent ev, Response res, long t0, bool install = false)
         {
             ev.Route = LinkRoutes.Clipboard;
             ev.Matched = true;
             ev.Reason = null;
             SetDestination(ev, Str(res.Json, "longUrl"));
             ev.LinkId = Str(res.Json, "linkId");
-            NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0);
+            NoteTap(StraitCore.ReplyClickId(Get(res.Json, "clickId")), t0, install);
         }
 
         /// <summary>Like <see cref="Call"/>, but no answer, 429 or 5xx throws (= try again next launch).</summary>
@@ -1057,6 +1081,7 @@ namespace Strait
             });
 
         private static bool IsEvent(Dictionary<string, object?> r) => r.TryGetValue("type", out var t) && t as string == "event";
+        private static bool IsReturn(Dictionary<string, object?> r) => r.TryGetValue("type", out var t) && t as string == "return";
 
         /// <summary>
         /// POST /v1/open (or /v1/event for a saved event, B13a); the HTTP status, or null when there was no answer.
@@ -1072,6 +1097,12 @@ namespace Strait
                 {
                     foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "type" && kv.Key != "at") body.Add(kv);
                     res = await Call("POST", "/v1/event", body);
+                }
+                else if (IsReturn(report))
+                {
+                    // B28: nothing but the note (no device class).
+                    foreach (var kv in report) if (kv.Key != "publishableKey" && kv.Key != "type") body.Add(kv);
+                    res = await Call("POST", "/v1/open", body);
                 }
                 else
                 {
@@ -1142,6 +1173,60 @@ namespace Strait
             }
             catch { /* never throw */ }
             finally { done.TrySetResult(true); }
+        }
+
+        /// <summary>
+        /// B28: send the day 1 / 7 / 30 "came back" note when one is due. Marked sent first, inside the tap-write chain (a
+        /// failed write sends nothing; a SetEnabled(false) clear is never undone); then reported like an open (queued and
+        /// retried on no answer, 429 or 5xx). One check at a time; nothing while switched off. Never throws.
+        /// </summary>
+        private Task CheckReturn()
+        {
+            TaskCompletionSource<bool> done;
+            lock (_gate)
+            {
+                if (_returnCheck != null && !_returnCheck.IsCompleted) return _returnCheck;
+                done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _returnCheck = done.Task;
+            }
+            _ = Run();
+            return done.Task;
+
+            async Task Run()
+            {
+                try
+                {
+                    if (!await IsEnabled()) return;
+                    Task<Dictionary<string, object?>?> mark;
+                    lock (_tapGate) { mark = Mark(_tapWrite); _tapWrite = mark; }
+                    var note = await mark;
+                    if (note != null && await IsEnabled()) await Report(note);
+                }
+                catch { /* never throw */ }
+                finally { done.TrySetResult(true); }
+            }
+
+            async Task<Dictionary<string, object?>?> Mark(Task prev)
+            {
+                try { await prev; } catch { }
+                try
+                {
+                    if (!await IsEnabled()) return null;
+                    var stored = await _storage.GetItemAsync(InstallTapKey);
+                    long now = Now();
+                    var note = StraitCore.ReturnNote(stored, now);
+                    var tap = StraitCore.InstallTap(stored);
+                    if (note == null || tap == null) return null;
+                    tap.Value.Sent.Add(note.Day);
+                    await _storage.SetItemAsync(InstallTapKey, StraitCore.InstallTapValue(note.ClickId, tap.Value.At, tap.Value.Sent));
+                    return new Dictionary<string, object?>
+                    {
+                        ["type"] = "return", ["openId"] = note.OpenId, ["kind"] = "return", ["day"] = note.Day, ["clickId"] = note.ClickId,
+                        ["platform"] = _config.Platform, ["at"] = now, ["sdkVersion"] = WireSdkVersion,
+                    };
+                }
+                catch { return null; } // the mark was not written: send nothing
+            }
         }
 
         private void AddDevice(List<KeyValuePair<string, object?>> fields)

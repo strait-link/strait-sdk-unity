@@ -27,9 +27,9 @@ namespace Strait.Tests
         public void VectorFileHasEverySection()
         {
             var v = Vectors();
-            Assert.Equal(16, v.GetProperty("version").GetInt32());
+            Assert.Equal(17, v.GetProperty("version").GetInt32());
             foreach (var section in new[] { "screenWidth", "portraitScreenWidth", "splitUrl", "referrer", "referrerClick", "takeClickId", "classify",
-                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay", "installReferrer", "userId" })
+                         "linkHosts", "appState", "openQueue", "retry", "eventClickId", "replyClickId", "reportUrl", "staleTap", "parseHandoffUrl", "deviceClass", "firstLaunchState", "retryDelay", "installReferrer", "userId", "returnNote" })
                 Assert.True(v.GetProperty(section).GetArrayLength() > 0, section);
         }
 
@@ -44,7 +44,11 @@ namespace Strait.Tests
             Assert.Equal(StraitCore.AttributionWindowMs, c.GetProperty("ATTRIBUTION_WINDOW_MS").GetInt64());
             Assert.Equal(StraitCore.InstallReferrerMax, c.GetProperty("INSTALL_REFERRER_MAX").GetInt32());
             Assert.Equal(StraitCore.UserIdMax, c.GetProperty("USER_ID_MAX").GetInt32());
-            Assert.Equal(7, c.EnumerateObject().Count());
+            Assert.Equal(StraitCore.ReturnDays, c.GetProperty("RETURN_DAYS").EnumerateArray().Select(d => d.GetInt32()).ToArray());
+            Assert.Equal(StraitCore.DayMs, c.GetProperty("DAY_MS").GetInt64());
+            Assert.Equal(9, c.EnumerateObject().Count());
+            Assert.Equal(new[] { 1, 7, 30 }, StraitCore.ReturnDays);
+            Assert.Equal(86_400_000L, StraitCore.DayMs);
             Assert.Equal(2000, AppStateTracker.ResumeWindowMs);
             Assert.Equal(1000, AppStateTracker.TransientPauseMs);
             Assert.Equal(100, StraitCore.OpenQueueMax);
@@ -154,6 +158,25 @@ namespace Strait.Tests
                 n++;
             }
             Assert.True(n >= 30);
+        }
+
+        [Fact]
+        public void ReturnNoteVectors()
+        {
+            // B28 (shared-spec ADR 0012): the day 1 / 7 / 30 "came back" note due now, or null.
+            var cases = Vectors().GetProperty("returnNote");
+            Assert.Equal(29, cases.GetArrayLength());
+            foreach (var c in cases.EnumerateArray())
+            {
+                var name = c.GetProperty("name").GetString();
+                var got = StraitCore.ReturnNote(StrOrNull(c.GetProperty("stored")), c.GetProperty("now").GetDouble());
+                var x = c.GetProperty("expected");
+                if (x.ValueKind == JsonValueKind.Null) { Assert.True(got == null, $"{name}: expected null, got day {got?.Day}"); continue; }
+                Assert.True(got != null, $"{name}: got null");
+                Assert.True(x.GetProperty("day").GetInt32() == got!.Day, $"{name}: day {got.Day}");
+                Assert.True(x.GetProperty("clickId").GetString() == got.ClickId, $"{name}: clickId {got.ClickId}");
+                Assert.True(x.GetProperty("openId").GetString() == got.OpenId, $"{name}: openId {got.OpenId}");
+            }
         }
 
         [Fact]
