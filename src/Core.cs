@@ -246,11 +246,11 @@ namespace Strait
         /// <summary>The zero of each run of ten decimal digits B27 reads: ASCII, Arabic-Indic, Eastern Arabic-Indic, Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam, full-width.</summary>
         private static readonly int[] DigitZeros = { 0x30, 0x660, 0x6F0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66, 0xFF10 };
 
-        /// <summary>Characters a written phone number may hold between its digits (B27 v15): spaces, dashes, dots, brackets, slashes, invisible marks.</summary>
+        /// <summary>Characters a written phone number may hold between its digits (B27 v15): spaces, dashes (incl. Japanese ー), dots, brackets, slashes, invisible marks.</summary>
         private static bool IsPhoneSeparator(int c) =>
             c == 0x20 || c == 0x28 || c == 0x29 || c == 0x2D || c == 0x2E || c == 0x2F || c == 0xA0 ||
             (c >= 0x2000 && c <= 0x2015) || (c >= 0x202A && c <= 0x202F) || c == 0x205F || c == 0x2060 || (c >= 0x2066 && c <= 0x2069) ||
-            c == 0x2212 || c == 0x3000 || c == 0xFEFF || c == 0xFF08 || c == 0xFF09 || (c >= 0xFF0D && c <= 0xFF0F);
+            c == 0xAD || c == 0x61C || c == 0x30FC || c == 0xFF70 || c == 0x2212 || c == 0x3000 || c == 0xFEFF || c == 0xFF08 || c == 0xFF09 || (c >= 0xFF0D && c <= 0xFF0F);
 
         /// <summary>
         /// B27 v15 (shared-spec ADR 0010): the canonical form of a phone number, or null when <paramref name="t"/> is not one.

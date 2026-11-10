@@ -70,7 +70,7 @@ namespace Strait.Tests
         {
             // B27 (shared-spec ADR 0009, v15 phone rule ADR 0010): what SetUserId sends with later events.
             var cases = Vectors().GetProperty("userId");
-            Assert.Equal(74, cases.GetArrayLength());
+            Assert.Equal(77, cases.GetArrayLength());
             foreach (var c in cases.EnumerateArray())
             {
                 var name = c.GetProperty("name").GetString();

@@ -2882,6 +2882,30 @@
       }
     },
     {
+      "name": "Japanese input: full-width digits and ー → 09012345678",
+      "input": "０９０ー１２３４ー５６７８",
+      "expected": {
+        "userId": "9876ccefa1e426aad25916a9cec49e9598bffcd5434d356c7d0c3cd3f0142baa",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "half-width ｰ → 09012345678",
+      "input": "090ｰ1234ｰ5678",
+      "expected": {
+        "userId": "9876ccefa1e426aad25916a9cec49e9598bffcd5434d356c7d0c3cd3f0142baa",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "soft hyphens → 9876543210",
+      "input": "98765­43210",
+      "expected": {
+        "userId": "7619ee8cea49187f309616e30ecf54be072259b43760f1f550a644945d5572f2",
+        "userIdHashed": true
+      }
+    },
+    {
       "name": "email with a full-width at sign = hashed",
       "input": "Priya＠Example.com",
       "expected": {
