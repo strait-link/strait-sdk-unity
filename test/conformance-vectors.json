@@ -1,5 +1,5 @@
 {
-  "version": 15,
+  "version": 16,
   "generatedFrom": "sdk-react-native/src/core.ts",
   "constants": {
     "RESUME_WINDOW_MS": 2000,
@@ -3037,6 +3037,86 @@
       "name": "tab between digits = control = not sent",
       "input": "98765\t43210",
       "expected": null
+    },
+    {
+      "name": "email: İ → i + U+0307",
+      "input": "İPEK@Example.com",
+      "expected": {
+        "userId": "6182afdc2043b443215baea80e61a943f11d6fc4dc61e1c5834aae320fb8c91f",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: i + U+0307 already lower = same hash as İ",
+      "input": "i̇pek@example.com",
+      "expected": {
+        "userId": "6182afdc2043b443215baea80e61a943f11d6fc4dc61e1c5834aae320fb8c91f",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: Σ before @ → σ, not ς",
+      "input": "ΚΩΣΤΑΣ@example.gr",
+      "expected": {
+        "userId": "37656c75f5701da16a75de472550adf49c0da1f6d51e68143155ef6a9da17f95",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: Σ before a dot → σ",
+      "input": "ΑΣ.ΒΗΤΑ@example.gr",
+      "expected": {
+        "userId": "32590738bb15d0db20e7bc668f623540af72499eab7a6270ad0fd432dba51baf",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: Σ at the very end → σ",
+      "input": "nikos@ΟΔΟΣ",
+      "expected": {
+        "userId": "85d67351c45ed44da2c38127cb523a6ff9807950a510bdfc002a764c82fb6417",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: ς typed in lower case stays ς",
+      "input": "κώστας@example.gr",
+      "expected": {
+        "userId": "bef536cd38f953c2e0f471f200b3dfc7efc2ef34cff38dcb60b259f5495f10ac",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: capital sharp s ẞ → ß",
+      "input": "STRAẞE@example.de",
+      "expected": {
+        "userId": "7281afd3f5258ca191a9347070596d1b23a3e58e8f2f0006c165750bd98723aa",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: Kelvin sign → k",
+      "input": "Kumar@example.com",
+      "expected": {
+        "userId": "5b783fb5389db2c088e83192c168dc76d8697363e63f7275652638f386a1ff02",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: Cyrillic → lower-case",
+      "input": "ИВАН@Example.ru",
+      "expected": {
+        "userId": "0e3210ec539ba2e3cd145b45d15c32d030b7cdb4938910f1f124be957bcdf506",
+        "userIdHashed": true
+      }
+    },
+    {
+      "name": "email: Turkish dotless ı stays ı",
+      "input": "ışık@example.com.tr",
+      "expected": {
+        "userId": "51a1fb3de586fd366249229553571339587eafd784771781c1cd72224c07db9a",
+        "userIdHashed": true
+      }
     }
   ]
 }
