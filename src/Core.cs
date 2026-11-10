@@ -225,25 +225,58 @@ namespace Strait
         /// <summary>The longest user id the SDK sends (after trimming, UTF-16 units); a longer one is not sent (engine ADR 0110).</summary>
         public const int UserIdMax = 128;
 
-        private static readonly Regex PhoneRe = new Regex(@"^\+?[0-9 ().-]+\z", RegexOptions.CultureInvariant);
-
         /// <summary>
-        /// B27 (shared-spec ADR 0009): what <c>SetUserId(id)</c> sends with later events, or null (nothing sent).
+        /// B27 (shared-spec ADR 0009, ADR 0010): what <c>SetUserId(id)</c> sends with later events, or null (nothing sent).
         /// Trimmed; empty, longer than <see cref="UserIdMax"/> or holding a control character = null. An email (any
-        /// <c>@</c>) is sent as the SHA-256 hex of its lower-case form, a phone number (only digits, spaces,
-        /// <c>+ ( ) . -</c>, with 8-15 digits) as the SHA-256 hex of its digits: hashed, the raw value never leaves the device.
+        /// <c>@</c>, <c>＠</c> or <c>﹫</c>) is sent as the SHA-256 hex of its lower-case form, a phone number
+        /// (<see cref="PhoneNumberForm"/>) as the SHA-256 hex of its canonical form: hashed, the raw value never leaves the device.
         /// </summary>
         public static UserIdFieldResult? UserIdField(string? id)
         {
             if (id == null) return null;
             var t = JsTrim(id);
             if (t.Length == 0 || t.Length > UserIdMax) return null;
-            if (t.IndexOf('@') >= 0) return new UserIdFieldResult(Sha256Hex(t.ToLowerInvariant()), true);
-            var digits = new StringBuilder();
-            foreach (var c in t) if (c >= '0' && c <= '9') digits.Append(c);
-            if (PhoneRe.IsMatch(t) && digits.Length >= 8 && digits.Length <= 15) return new UserIdFieldResult(Sha256Hex(digits.ToString()), true);
+            if (t.IndexOf('@') >= 0 || t.IndexOf('\uFF20') >= 0 || t.IndexOf('\uFE6B') >= 0) return new UserIdFieldResult(Sha256Hex(t.ToLowerInvariant()), true);
+            var phone = PhoneNumberForm(t);
+            if (phone != null) return new UserIdFieldResult(Sha256Hex(phone), true);
             foreach (var c in t) if (c < 0x20 || c == 0x7f) return null;
             return new UserIdFieldResult(t, false);
+        }
+
+        /// <summary>The zero of each run of ten decimal digits B27 reads: ASCII, Arabic-Indic, Eastern Arabic-Indic, Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam, full-width.</summary>
+        private static readonly int[] DigitZeros = { 0x30, 0x660, 0x6F0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66, 0xFF10 };
+
+        /// <summary>Characters a written phone number may hold between its digits (B27 v15): spaces, dashes (incl. Japanese ー), dots, brackets, slashes, invisible marks.</summary>
+        private static bool IsPhoneSeparator(int c) =>
+            c == 0x20 || c == 0x28 || c == 0x29 || c == 0x2D || c == 0x2E || c == 0x2F || c == 0xA0 ||
+            (c >= 0x2000 && c <= 0x2015) || (c >= 0x202A && c <= 0x202F) || c == 0x205F || c == 0x2060 || (c >= 0x2066 && c <= 0x2069) ||
+            c == 0xAD || c == 0x61C || c == 0x30FC || c == 0xFF70 || c == 0x2212 || c == 0x3000 || c == 0xFEFF || c == 0xFF08 || c == 0xFF09 || (c >= 0xFF0D && c <= 0xFF0F);
+
+        /// <summary>
+        /// B27 v15 (shared-spec ADR 0010): the canonical form of a phone number, or null when <paramref name="t"/> is not one.
+        /// After an optional <c>tel:</c> (any ASCII case), it may hold only decimal digits (any <see cref="DigitZeros"/> run),
+        /// separators and one <c>+</c> / <c>＋</c> before the first digit, with 8-15 digits (8-17 when they start with the
+        /// international <c>00</c> and there is no <c>+</c>). Form: <c>+</c> and the digits when written with <c>+</c>;
+        /// <c>+</c> and the digits after <c>00</c>; else the digits (ASCII).
+        /// </summary>
+        public static string? PhoneNumberForm(string t)
+        {
+            var start = t.Length >= 4 && string.Equals(t.Substring(0, 4), "tel:", StringComparison.OrdinalIgnoreCase) ? 4 : 0;
+            var plus = false;
+            var digits = new StringBuilder();
+            for (var i = start; i < t.Length; i++)
+            {
+                int c = t[i];
+                var zero = -1;
+                foreach (var z in DigitZeros) if (c >= z && c <= z + 9) { zero = z; break; }
+                if (zero >= 0) digits.Append((char)('0' + c - zero));
+                else if ((c == 0x2B || c == 0xFF0B) && !plus && digits.Length == 0) plus = true;
+                else if (!IsPhoneSeparator(c)) return null;
+            }
+            var d = digits.ToString();
+            var zeroZero = !plus && d.StartsWith("00", StringComparison.Ordinal);
+            if (d.Length < 8 || d.Length > (zeroZero ? 17 : 15)) return null;
+            return plus ? "+" + d : zeroZero ? "+" + d.Substring(2) : d;
         }
 
         /// <summary>SHA-256 of the UTF-8 bytes of <paramref name="s"/>, lower-case hex.</summary>

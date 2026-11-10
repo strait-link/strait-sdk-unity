@@ -206,7 +206,7 @@ namespace Strait
     public sealed class StraitClient
     {
         /// <summary>This SDK's version (equals package.json; a test checks it).</summary>
-        public const string SdkVersion = "0.9.5";
+        public const string SdkVersion = "0.9.6";
         /// <summary>
         /// <c>sdkVersion</c> on every call that records an app open or install (contract B25, shared-spec ADR 0007):
         /// the SDK names itself, so the engine can tell which SDK and version an app runs. Never on /v1/event or /v1/lookup.

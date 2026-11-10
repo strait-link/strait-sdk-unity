@@ -1,5 +1,5 @@
 {
-  "specCommit": "1ad9f0f",
+  "specCommit": "fcc1b5e",
   "files": {
     "signature": {
       "path": "test/test-vectors.json",
@@ -7,7 +7,7 @@
     },
     "conformance": {
       "path": "test/conformance-vectors.json",
-      "sha256": "263e8c2bff1904d747422955841730a21e1b457e971a6a87d9af22f4652e9f46"
+      "sha256": "9974b1ac7ebf2ea9e919eaaccbd2b0524c124b3a8d7c643530828d07aec15903"
     }
   },
   "conformanceTest": "test/ConformanceTests.cs"
