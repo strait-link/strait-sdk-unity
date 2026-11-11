@@ -121,6 +121,16 @@ namespace Strait
         public Func<Task<string?>>? InstallReferrer { get; set; }
         /// <summary>"ios", "android" or "other".</summary>
         public string Platform { get; set; } = "other";
+        /// <summary>
+        /// A WebGL player build: a web page has no install, so contract B28's "came back" notes are never sent. Set by the
+        /// compiler (UNITY_WEBGL); internal so tests can set it.
+        /// </summary>
+        internal bool WebBuild { get; set; } =
+#if UNITY_WEBGL && !UNITY_EDITOR
+            true;
+#else
+            false;
+#endif
         /// <summary>Collects the device fingerprint fields. Called on demand.</summary>
         public Func<DeviceFields?>? DeviceFields { get; set; }
         /// <summary>
@@ -1196,7 +1206,7 @@ namespace Strait
             {
                 try
                 {
-                    if (!await IsEnabled()) return;
+                    if (_config.WebBuild || !await IsEnabled()) return;
                     Task<Dictionary<string, object?>?> mark;
                     lock (_tapGate) { mark = Mark(_tapWrite); _tapWrite = mark; }
                     var note = await mark;

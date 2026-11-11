@@ -109,6 +109,32 @@ namespace Strait.Tests
         }
 
         [Fact]
+        public async Task AWebGLBuildSendsNoNote_AWebPageHasNoInstall()
+        {
+            var e = new Engine();
+            var s = new Store();
+            await Make(e, s, () => T).Start(null); // the install: its tap is kept
+            await Settle();
+            Assert.Equal(StraitCore.InstallTapValue(Click, T), s[StraitClient.InstallTapKey]);
+            var cfg = new StraitConfig
+            {
+                PublishableKey = PK, Endpoint = "https://acme.strait.link", Storage = s, Platform = "other", Transport = e,
+                Clock = () => T + Day + 60_000, DeviceClass = () => "phone", WebBuild = true,
+            };
+            var web = new StraitClient(cfg);
+            await web.Start(null);
+            await Settle();
+            web.OnAppState(AppLifecycle.Background);
+            web.OnAppState(AppLifecycle.Active);
+            await Settle();
+            Assert.Empty(e.Notes());
+            Assert.Equal("[]", Tap(s).GetProperty("sent").GetRawText()); // nothing marked as sent either
+#if !UNITY_WEBGL
+            Assert.False(new StraitConfig().WebBuild); // only a WebGL player build sets it
+#endif
+        }
+
+        [Fact]
         public async Task ALaterTapNeverReplacesTheInstallTap_AFreshFirstLaunchClearsARestoredOne()
         {
             var e = new Engine();
