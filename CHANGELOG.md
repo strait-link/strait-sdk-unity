@@ -8,6 +8,7 @@
   (`POST /v1/open {kind: "return", day, clickId, openId: "r<day>-<tap id>"}`, saved and retried like an open report).
   No new identifier. Nothing while switched off; `SetEnabled(false)` also deletes the install tap.
   Feeds the dashboard's Came back D1 / D7 / D30 columns. Conformance vectors v17 (`returnNote`).
+  A WebGL build sends none (a web page has no install; B28 says never on the web): set by `UNITY_WEBGL`.
   **Not released yet:** waits for the privacy wording OK.
 
 ## 0.9.7 (10 Nov 2026)
